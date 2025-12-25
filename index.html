@@ -1,94 +1,47 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8" />
-  <title>Attack FD25 – Přehled teplot</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta charset="UTF-8" />
+<title>Attack FD25 – Přehled teplot</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #e5e7eb;
-      margin: 0;
-      padding: 20px;
-    }
-
-    h1 {
-      font-size: 1.8rem;
-      margin-bottom: 10px;
-    }
-
-    p {
-      margin-top: 0;
-      opacity: 0.8;
-    }
-
-    button {
-      font-size: 1.2rem;
-      padding: 10px 20px;
-      border-radius: 12px;
-      border: none;
-      background: #2563eb;
-      color: white;
-      cursor: pointer;
-      margin-bottom: 20px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 20px;
-    }
-
-    .card {
-      background: #020617;
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-      text-align: center;
-    }
-
-    .value {
-      font-size: 2.2rem;
-      font-weight: bold;
-    }
-
-    .unit {
-      font-size: 1rem;
-      opacity: 0.7;
-    }
-
-    canvas {
-      margin-top: 10px;
-    }
-
-    /* ====== DISPLEJOVÝ REŽIM ====== */
-    .display-mode body {
-      padding: 10px;
-    }
-
-    .display-mode h1 {
-      font-size: 3rem;
-    }
-
-    .display-mode .value {
-      font-size: 4.5rem;
-    }
-
-    .display-mode .unit {
-      font-size: 1.5rem;
-    }
-
-    .display-mode .grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    .display-mode canvas {
-      height: 420px !important;
-    }
-  </style>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+  margin: 0;
+  padding: 20px;
+}
+h1 {
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+.card {
+  background: #020617;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  text-align: center;
+}
+.value {
+  font-size: 2.2rem;
+  font-weight: bold;
+}
+.unit {
+  font-size: 1rem;
+  opacity: 0.7;
+}
+canvas {
+  margin-top: 10px;
+}
+</style>
 </head>
 
 <body>
@@ -96,38 +49,12 @@
 <h1>🔥 Attack FD25 – Rodinný dům</h1>
 <p>Automatický kotel FD25 + bojler 125 l</p>
 
-<button onclick="toggleDisplay()">📺 Režim velkého displeje</button>
-
 <div class="grid">
-  <div class="card">
-    <div>Kotel</div>
-    <div class="value" id="f5">–</div>
-    <div class="unit">°C</div>
-  </div>
-
-  <div class="card">
-    <div>Výstup z kotle</div>
-    <div class="value" id="f2">–</div>
-    <div class="unit">°C</div>
-  </div>
-
-  <div class="card">
-    <div>Zpátečka kotle</div>
-    <div class="value" id="f1">–</div>
-    <div class="unit">°C</div>
-  </div>
-
-  <div class="card">
-    <div>Teplota TUV</div>
-    <div class="value" id="f3">–</div>
-    <div class="unit">°C</div>
-  </div>
-
-  <div class="card">
-    <div>Venkovní teplota</div>
-    <div class="value" id="f4">–</div>
-    <div class="unit">°C</div>
-  </div>
+  <div class="card"><div>Kotel</div><div class="value" id="f5">–</div><div class="unit">°C</div></div>
+  <div class="card"><div>Výstup z kotle</div><div class="value" id="f2">–</div><div class="unit">°C</div></div>
+  <div class="card"><div>Zpátečka kotle</div><div class="value" id="f1">–</div><div class="unit">°C</div></div>
+  <div class="card"><div>Teplota TUV</div><div class="value" id="f3">–</div><div class="unit">°C</div></div>
+  <div class="card"><div>Venkovní teplota</div><div class="value" id="f4">–</div><div class="unit">°C</div></div>
 </div>
 
 <div class="card" style="margin-top:30px;">
@@ -137,9 +64,34 @@
 
 <script>
 const CHANNEL_ID = 231269;
-const RESULTS = 96; // cca 24 hodin
-
+const RESULTS = 96;
 let chart;
+
+// Plugin pro popisky na konci křivek
+const lineLabelsPlugin = {
+  id: 'lineLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    ctx.save();
+    chart.data.datasets.forEach((dataset, i) => {
+      const meta = chart.getDatasetMeta(i);
+      if (!meta.hidden) {
+        const lastPoint = meta.data[meta.data.length - 1];
+        const value = dataset.data[dataset.data.length - 1];
+        if (value !== null) {
+          ctx.fillStyle = dataset.borderColor || '#fff';
+          ctx.font = '12px Arial';
+          ctx.fillText(
+            `${dataset.label}: ${Number(value).toFixed(1)}°C`,
+            lastPoint.x + 6,
+            lastPoint.y + 4
+          );
+        }
+      }
+    });
+    ctx.restore();
+  }
+};
 
 async function loadData() {
   const url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=${RESULTS}`;
@@ -149,9 +101,11 @@ async function loadData() {
 
   const last = feeds[feeds.length - 1];
 
+  // KARTY – 1 desetinné místo
   for (let i = 1; i <= 5; i++) {
+    const val = last[`field${i}`];
     document.getElementById(`f${i}`).textContent =
-      last[`field${i}`] !== null ? last[`field${i}`] : '–';
+      val !== null ? Number(val).toFixed(1) : '–';
   }
 
   const labels = feeds.map(f =>
@@ -169,7 +123,9 @@ async function loadData() {
     { label: 'Venkovní teplota', field: 'field4' }
   ].map(cfg => ({
     label: cfg.label,
-    data: feeds.map(f => f[cfg.field]),
+    data: feeds.map(f =>
+      f[cfg.field] !== null ? Number(f[cfg.field]).toFixed(1) : null
+    ),
     borderWidth: 2,
     tension: 0.3
   }));
@@ -190,18 +146,9 @@ async function loadData() {
         x: { ticks: { color: '#94a3b8' } },
         y: { ticks: { color: '#94a3b8' } }
       }
-    }
+    },
+    plugins: [lineLabelsPlugin]
   });
-}
-
-function toggleDisplay() {
-  document.documentElement.classList.toggle('display-mode');
-
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
 }
 
 loadData();
