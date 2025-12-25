@@ -50,11 +50,20 @@ canvas {
 <p>Automatický kotel FD25 + bojler 125 l</p>
 
 <div class="grid">
-  <div class="card"><div>Kotel</div><div class="value" id="f5">–</div><div class="unit">°C</div></div>
+  <!-- PROHOZENO -->
   <div class="card"><div>Výstup z kotle</div><div class="value" id="f2">–</div><div class="unit">°C</div></div>
+  <div class="card"><div>Kotel</div><div class="value" id="f5">–</div><div class="unit">°C</div></div>
+
   <div class="card"><div>Zpátečka kotle</div><div class="value" id="f1">–</div><div class="unit">°C</div></div>
   <div class="card"><div>Teplota TUV</div><div class="value" id="f3">–</div><div class="unit">°C</div></div>
   <div class="card"><div>Venkovní teplota</div><div class="value" id="f4">–</div><div class="unit">°C</div></div>
+
+  <!-- ΔT -->
+  <div class="card">
+    <div>ΔT (Výstup − Zpátečka)</div>
+    <div class="value" id="dt">–</div>
+    <div class="unit">°C</div>
+  </div>
 </div>
 
 <div class="card" style="margin-top:30px;">
@@ -67,7 +76,7 @@ const CHANNEL_ID = 231269;
 const RESULTS = 96;
 let chart;
 
-// Plugin pro popisky na konci křivek
+/* Popisky na konci křivek */
 const lineLabelsPlugin = {
   id: 'lineLabels',
   afterDatasetsDraw(chart) {
@@ -98,15 +107,22 @@ async function loadData() {
   const res = await fetch(url);
   const data = await res.json();
   const feeds = data.feeds;
-
   const last = feeds[feeds.length - 1];
 
-  // KARTY – 1 desetinné místo
+  // KARTY
   for (let i = 1; i <= 5; i++) {
     const val = last[`field${i}`];
     document.getElementById(`f${i}`).textContent =
       val !== null ? Number(val).toFixed(1) : '–';
   }
+
+  // ΔT = výstup (field2) − zpátečka (field1)
+  const vystup = Number(last.field2);
+  const zpatecka = Number(last.field1);
+  document.getElementById('dt').textContent =
+    !isNaN(vystup) && !isNaN(zpatecka)
+      ? (vystup - zpatecka).toFixed(1)
+      : '–';
 
   const labels = feeds.map(f =>
     new Date(f.created_at).toLocaleTimeString('cs-CZ', {
@@ -115,9 +131,10 @@ async function loadData() {
     })
   );
 
+  // PROHOZENO I V GRAFU
   const datasets = [
-    { label: 'Kotel', field: 'field5' },
     { label: 'Výstup z kotle', field: 'field2' },
+    { label: 'Kotel', field: 'field5' },
     { label: 'Zpátečka kotle', field: 'field1' },
     { label: 'TUV', field: 'field3' },
     { label: 'Venkovní teplota', field: 'field4' }
