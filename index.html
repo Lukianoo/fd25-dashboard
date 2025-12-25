@@ -77,17 +77,18 @@ async function loadData() {
   const labels = feeds.map(f => new Date(f.created_at).toLocaleTimeString('cs-CZ', {hour: '2-digit', minute:'2-digit'}));
 
   const datasets = [
-    {label: 'Kotel', field: 'field1'},
-    {label: 'Výstup', field: 'field2'},
-    {label: 'Zpátečka', field: 'field3'},
-    {label: 'TUV', field: 'field4'},
-    {label: 'Venkovní', field: 'field5'}
-  ].map((cfg, i) => ({
-    label: cfg.label,
-    data: feeds.map(f => f[cfg.field]),
-    borderWidth: 2,
-    tension: 0.3
-  }));
+  {label: 'Kotel', field: 'field5'},
+  {label: 'Výstup z kotle', field: 'field2'},
+  {label: 'Zpátečka kotle', field: 'field1'},
+  {label: 'TUV', field: 'field3'},
+  {label: 'Venkovní teplota', field: 'field4'}
+].map(cfg => ({
+  label: cfg.label,
+  data: feeds.map(f => f[cfg.field]),
+  borderWidth: 2,
+  tension: 0.3
+}));
+
 
   new Chart(document.getElementById('chart'), {
     type: 'line',
