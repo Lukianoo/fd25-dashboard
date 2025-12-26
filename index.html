@@ -15,174 +15,211 @@ body {
   padding:20px;
 }
 h1 { margin-bottom:5px; }
-.small { opacity:0.7; font-size:0.9rem; }
-
-.section-title {
-  margin-top:30px;
-  margin-bottom:10px;
-  font-size:1.2rem;
-}
+small { color:#94a3b8; }
 
 .grid {
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:16px;
+  gap:15px;
 }
 .card {
   background:#020617;
-  border-radius:16px;
-  padding:16px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.4);
+  border-radius:14px;
+  padding:14px;
+  box-shadow:0 8px 20px rgba(0,0,0,.4);
 }
 .value {
   font-size:2.1rem;
   font-weight:bold;
 }
-.unit { opacity:0.7; }
+.unit { opacity:.7; }
 
-canvas { margin-top:10px; }
+input, select {
+  width:100%;
+  padding:6px;
+  margin-top:5px;
+  background:#020617;
+  color:#e5e7eb;
+  border:1px solid #334155;
+  border-radius:6px;
+}
+
+.section {
+  margin-top:25px;
+}
+
+canvas { margin-top:15px; }
 </style>
 </head>
 
 <body>
 
-<h1>🔥 Attack FD25 – Rodinný dům</h1>
-<div class="small">
-  Automatický kotel FD25 · bojler 125 l Dražice<br>
-  ⏱️ Poslední aktualizace: <span id="lastUpdate">–</span>
-</div>
+<h1>🔥 Attack FD25 – Profi panel vytápění</h1>
+<small>Poslední aktualizace: <span id="lastUpdate">–</span></small>
 
-<!-- TEPLOTY -->
-<div class="section-title">🌡️ Teploty</div>
-<div class="grid">
+<!-- ================= TEPLOTY ================= -->
+<div class="section grid">
   <div class="card"><div>Kotel</div><div class="value" id="f5">–</div><div class="unit">°C</div></div>
-  <div class="card"><div>Výstup z kotle</div><div class="value" id="f2">–</div><div class="unit">°C</div></div>
+  <div class="card"><div>Výstup</div><div class="value" id="f2">–</div><div class="unit">°C</div></div>
   <div class="card"><div>Zpátečka</div><div class="value" id="f1">–</div><div class="unit">°C</div></div>
-  <div class="card"><div>ΔT</div><div class="value" id="deltaT">–</div><div class="unit">°C</div></div>
+  <div class="card"><div>ΔT topení</div><div class="value" id="dt">–</div><div class="unit">°C</div></div>
   <div class="card"><div>TUV</div><div class="value" id="f3">–</div><div class="unit">°C</div></div>
   <div class="card"><div>Venkovní</div><div class="value" id="f4">–</div><div class="unit">°C</div></div>
 </div>
 
-<!-- ENERGIE -->
-<div class="section-title">🚿 Spotřeba TUV</div>
-<div class="grid">
+<!-- ================= CERPADLO ================= -->
+<div class="section grid">
   <div class="card">
-    <div>Denní energie TUV</div>
-    <div class="value" id="energyDay">–</div>
-    <div class="unit">kWh</div>
+    <div>Čerpadlo – příkon (W)</div>
+    <input id="pumpPower" type="number" step="1">
   </div>
-
   <div class="card">
-    <div>Denní uhlí (Bílina)</div>
-    <div class="value" id="coalDay">–</div>
-    <div class="unit">kg</div>
+    <div>Režim čerpadla</div>
+    <select id="pumpMode">
+      <option value="auto">AUTOADAPT</option>
+      <option value="cp">Konstantní tlak</option>
+      <option value="cs">Konstantní otáčky</option>
+    </select>
   </div>
-
   <div class="card">
-    <div>Měsíční energie TUV<br><span class="small">(od 1. dne)</span></div>
-    <div class="value" id="energyMonth">–</div>
-    <div class="unit">kWh</div>
+    <div>Odhad průtoku</div>
+    <div class="value" id="flow">–</div>
+    <div class="unit">l/h</div>
   </div>
-
   <div class="card">
-    <div>Měsíční uhlí (Bílina)</div>
-    <div class="value" id="coalMonth">–</div>
-    <div class="unit">kg</div>
+    <div>Okamžitý výkon topení</div>
+    <div class="value" id="powerHeat">–</div>
+    <div class="unit">kW</div>
   </div>
 </div>
 
-<!-- GRAF -->
-<div class="section-title">📈 Teploty – posledních 24 h</div>
-<div class="card">
+<!-- ================= SPOTREBA ================= -->
+<div class="section grid">
+  <div class="card">
+    <div>Denní energie – TOPENÍ</div>
+    <div class="value" id="dayHeat">–</div>
+    <div class="unit">kWh</div>
+  </div>
+  <div class="card">
+    <div>Měsíční energie – TOPENÍ</div>
+    <div class="value" id="monthHeat">–</div>
+    <div class="unit">kWh</div>
+  </div>
+  <div class="card">
+    <div>Uhlí – TOPENÍ (měsíc)</div>
+    <div class="value" id="coalHeat">–</div>
+    <div class="unit">kg</div>
+  </div>
+  <div class="card">
+    <div>Energie TUV – tento měsíc<br><small id="tuvFrom">od –</small></div>
+    <div class="value" id="monthTUV">–</div>
+    <div class="unit">kWh</div>
+  </div>
+</div>
+
+<!-- ================= GRAF ================= -->
+<div class="section card">
+  <h3>📈 Teploty – posledních 24 h</h3>
   <canvas id="chart"></canvas>
 </div>
 
 <script>
 const CHANNEL_ID = 231269;
-const BOILER_VOLUME = 125;
-const COAL_KG_PER_KWH = 0.27;
-const RESULTS_24H = 96;
+const RESULTS = 96;
+const COAL_PER_KWH = 0.27;
 
+let dailyHeat = 0;
+let monthlyHeat = 0;
+let monthlyTUV = 0;
+let lastTime = null;
 let chart;
 
-function r1(v){ return (!isNaN(v) && v!==null) ? Number(v).toFixed(1) : '–'; }
+function flowFromPump(power, mode) {
+  let factor = 1;
+  if (mode === 'cp') factor = 0.9;
+  if (mode === 'cs') factor = 1.1;
+  return power * 60 * factor;
+}
 
-async function loadData(){
+function savePump() {
+  localStorage.setItem('pumpPower', pumpPower.value);
+  localStorage.setItem('pumpMode', pumpMode.value);
+}
 
-  /* ==== 24 h data ==== */
-  const r24 = await fetch(`https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=${RESULTS_24H}`);
-  const d24 = await r24.json();
-  const f24 = d24.feeds;
-  const last = f24.at(-1);
+pumpPower.value = localStorage.getItem('pumpPower') || 15;
+pumpMode.value = localStorage.getItem('pumpMode') || 'auto';
+pumpPower.onchange = savePump;
+pumpMode.onchange = savePump;
+
+async function loadData() {
+  const res = await fetch(`https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=${RESULTS}`);
+  const data = await res.json();
+  const feeds = data.feeds;
+  const last = feeds.at(-1);
 
   document.getElementById('lastUpdate').textContent =
     new Date(last.created_at).toLocaleString('cs-CZ');
 
-  ['1','2','3','4','5'].forEach(i=>{
-    document.getElementById('f'+i).textContent = r1(last['field'+i]);
-  });
+  const f = n => parseFloat(last[`field${n}`]);
+  document.getElementById('f1').textContent = f(1).toFixed(1);
+  document.getElementById('f2').textContent = f(2).toFixed(1);
+  document.getElementById('f3').textContent = f(3).toFixed(1);
+  document.getElementById('f4').textContent = f(4).toFixed(1);
+  document.getElementById('f5').textContent = f(5).toFixed(1);
 
-  document.getElementById('deltaT').textContent =
-    r1(last.field2 - last.field1);
+  const dt = f(2) - f(1);
+  document.getElementById('dt').textContent = dt.toFixed(1);
 
-  /* ==== CELÁ HISTORIE (pro měsíc) ==== */
-  const rall = await fetch(`https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=8000`);
-  const all = (await rall.json()).feeds;
+  const flow = flowFromPump(+pumpPower.value, pumpMode.value);
+  document.getElementById('flow').textContent = Math.round(flow);
 
-  const now = new Date();
-  const startDay = new Date(now); startDay.setHours(0,0,0,0);
-  const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const powerHeat = 0.00116 * flow * dt;
+  document.getElementById('powerHeat').textContent = powerHeat.toFixed(1);
 
-  let eDay = 0, eMonth = 0;
-
-  for(let i=1;i<all.length;i++){
-    const p = all[i-1];
-    const c = all[i];
-    const t = new Date(c.created_at);
-    const dT = c.field3 - p.field3;
-
-    if(dT > 0){
-      const e = BOILER_VOLUME * dT * 0.001163;
-      if(t >= startDay)   eDay   += e;
-      if(t >= startMonth) eMonth += e;
-    }
+  const time = new Date(last.created_at);
+  if (lastTime) {
+    const hours = (time - lastTime) / 3600000;
+    dailyHeat += powerHeat * hours;
+    monthlyHeat += powerHeat * hours;
   }
+  lastTime = time;
 
-  document.getElementById('energyDay').textContent = r1(eDay);
-  document.getElementById('coalDay').textContent   = r1(eDay * COAL_KG_PER_KWH);
-  document.getElementById('energyMonth').textContent = r1(eMonth);
-  document.getElementById('coalMonth').textContent   = r1(eMonth * COAL_KG_PER_KWH);
+  document.getElementById('dayHeat').textContent = dailyHeat.toFixed(1);
+  document.getElementById('monthHeat').textContent = monthlyHeat.toFixed(0);
+  document.getElementById('coalHeat').textContent = (monthlyHeat * COAL_PER_KWH).toFixed(0);
 
-  /* ==== GRAF ==== */
-  const labels = f24.map(f =>
-    new Date(f.created_at).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'})
-  );
+  if (!localStorage.getItem('tuvStart')) {
+    localStorage.setItem('tuvStart', time.toLocaleDateString('cs-CZ'));
+  }
+  document.getElementById('tuvFrom').textContent =
+    "od " + localStorage.getItem('tuvStart');
+  document.getElementById('monthTUV').textContent = monthlyTUV.toFixed(1);
 
-  const cfg = [
-    ['Kotel','field5'],
-    ['Výstup','field2'],
-    ['Zpátečka','field1'],
-    ['TUV','field3'],
-    ['Venkovní','field4']
-  ];
+  drawChart(feeds);
+}
 
-  const datasets = cfg.map(c=>({
-    label:c[0],
-    data:f24.map(f=>f[c[1]]),
+function drawChart(feeds) {
+  const labels = feeds.map(f =>
+    new Date(f.created_at).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'}));
+
+  const dataSets = [
+    {label:'Výstup', field:'field2'},
+    {label:'Zpátečka', field:'field1'},
+    {label:'TUV', field:'field3'}
+  ].map(c => ({
+    label:c.label,
+    data:feeds.map(f=>f[c.field]),
     borderWidth:2,
     tension:0.3
   }));
 
-  if(chart) chart.destroy();
-  chart = new Chart(document.getElementById('chart'),{
+  if (chart) chart.destroy();
+  chart = new Chart(chartEl, {
     type:'line',
-    data:{labels,datasets},
+    data:{labels,datasets:dataSets},
     options:{
       plugins:{legend:{labels:{color:'#e5e7eb'}}},
-      scales:{
-        x:{ticks:{color:'#94a3b8'}},
-        y:{ticks:{color:'#94a3b8'}}
-      }
+      scales:{x:{ticks:{color:'#94a3b8'}},y:{ticks:{color:'#94a3b8'}}}
     }
   });
 }
