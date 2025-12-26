@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<title>Attack FD25 – Dispečerský panel</title>
+<title>Attack FD25 – Profi panel vytápění</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -22,11 +22,18 @@ header {
   margin-bottom: 20px;
 }
 
-h1 { margin: 0; font-size: 2rem; }
-.update { opacity: 0.8; }
+h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.update {
+  opacity: 0.8;
+  font-size: 1rem;
+}
 
 .section-title {
-  margin: 30px 0 10px;
+  margin: 28px 0 10px;
   font-size: 1.2rem;
   opacity: 0.9;
 }
@@ -61,51 +68,57 @@ h1 { margin: 0; font-size: 2rem; }
   opacity: 0.6;
 }
 
-canvas { margin-top: 10px; }
+canvas {
+  margin-top: 10px;
+}
 </style>
 </head>
 
 <body>
 
 <header>
-  <h1>🔥 Attack FD25 – Dispečerský panel</h1>
+  <h1>🔥 Attack FD25 – Profi panel vytápění</h1>
   <div class="update" id="updated">Aktualizace: –</div>
 </header>
 
+<!-- TEPLOTY -->
 <div class="section-title">Teploty systému</div>
 <div class="grid">
   <div class="card"><h3>Kotel</h3><div class="value" id="kotel">–</div><div class="unit">°C</div></div>
-  <div class="card"><h3>Výstup</h3><div class="value" id="vystup">–</div><div class="unit">°C</div></div>
+  <div class="card"><h3>Výstup z kotle</h3><div class="value" id="vystup">–</div><div class="unit">°C</div></div>
   <div class="card"><h3>Zpátečka</h3><div class="value" id="zpat">–</div><div class="unit">°C</div></div>
-  <div class="card"><h3>ΔT</h3><div class="value" id="delta">–</div><div class="unit">°C</div></div>
+  <div class="card"><h3>ΔT (výstup − zpátečka)</h3><div class="value" id="delta">–</div><div class="unit">°C</div></div>
   <div class="card"><h3>TUV</h3><div class="value" id="tuv">–</div><div class="unit">°C</div></div>
-  <div class="card"><h3>Venkovní</h3><div class="value" id="venek">–</div><div class="unit">°C</div></div>
+  <div class="card"><h3>Venkovní teplota</h3><div class="value" id="venek">–</div><div class="unit">°C</div></div>
 </div>
 
+<!-- ENERGIE -->
 <div class="section-title">Ohřev TUV – energie</div>
 <div class="grid">
   <div class="card"><h3>Dnešní energie TUV</h3><div class="value" id="today_kwh">–</div><div class="unit">kWh</div></div>
-  <div class="card"><h3>Posledních 24 h</h3><div class="value" id="day24_kwh">–</div><div class="unit">kWh</div></div>
-  <div class="card"><h3>Tento měsíc</h3><div class="value" id="month_kwh">–</div><div class="unit">kWh</div></div>
+  <div class="card"><h3>Energie TUV – posledních 24 h</h3><div class="value" id="day24_kwh">–</div><div class="unit">kWh</div></div>
+  <div class="card"><h3>Energie TUV – tento měsíc</h3><div class="value" id="month_kwh">–</div><div class="unit">kWh</div></div>
 </div>
 
+<!-- UHLÍ -->
 <div class="section-title">Ekvivalent uhlí (hnědé – Bílina)</div>
 <div class="grid">
   <div class="card"><h3>Dnes</h3><div class="value" id="today_coal">–</div><div class="unit">kg</div></div>
-  <div class="card"><h3>24 h</h3><div class="value" id="day24_coal">–</div><div class="unit">kg</div></div>
-  <div class="card"><h3>Měsíc</h3><div class="value" id="month_coal">–</div><div class="unit">kg</div></div>
+  <div class="card"><h3>Posledních 24 h</h3><div class="value" id="day24_coal">–</div><div class="unit">kg</div></div>
+  <div class="card"><h3>Tento měsíc</h3><div class="value" id="month_coal">–</div><div class="unit">kg</div></div>
 </div>
 
-<div class="section-title">Graf – posledních 24 h</div>
+<!-- GRAF -->
+<div class="section-title">Graf teplot – posledních 24 hodin</div>
 <div class="card">
   <canvas id="chart"></canvas>
 </div>
 
 <script>
 const CHANNEL_ID = 231269;
-const RESULTS = 96;
 
-const BOJLER = 125;
+/* FYZIKÁLNÍ KONSTANTY */
+const BOJLER_L = 125;
 const CP = 4.186;
 const ETA = 0.75;
 const COAL_KWH = 5.0;
@@ -113,14 +126,22 @@ const COAL_KWH = 5.0;
 let chart;
 
 function energyFromDelta(dT) {
-  return BOJLER * CP * dT / 3600 / ETA;
+  return BOJLER_L * CP * dT / 3600 / ETA;
+}
+
+async function fetchFeeds(results) {
+  const res = await fetch(
+    `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=${results}`
+  );
+  const data = await res.json();
+  return data.feeds;
 }
 
 async function loadData() {
-  const res = await fetch(`https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=${RESULTS}`);
-  const data = await res.json();
-  const feeds = data.feeds;
-  const last = feeds[feeds.length - 1];
+
+  /* ===== 24 HODIN ===== */
+  const feeds24 = await fetchFeeds(96);
+  const last = feeds24[feeds24.length - 1];
 
   document.getElementById("updated").textContent =
     "Aktualizace: " + new Date(last.created_at).toLocaleString("cs-CZ");
@@ -135,31 +156,49 @@ async function loadData() {
   document.getElementById("tuv").textContent = (+last.field3).toFixed(1);
   document.getElementById("venek").textContent = (+last.field4).toFixed(1);
 
-  let today = 0, day24 = 0, month = 0;
+  let today = 0;
+  let day24 = 0;
+
   const now = new Date(last.created_at);
   const midnight = new Date(now); midnight.setHours(0,0,0,0);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  for (let i = 1; i < feeds.length; i++) {
-    const tPrev = new Date(feeds[i-1].created_at);
-    const dT = feeds[i].field3 - feeds[i-1].field3;
+  for (let i = 1; i < feeds24.length; i++) {
+    const dT = feeds24[i].field3 - feeds24[i-1].field3;
     if (dT <= 0) continue;
 
     const e = energyFromDelta(dT);
     day24 += e;
-    if (tPrev >= midnight) today += e;
-    if (tPrev >= monthStart) month += e;
+
+    if (new Date(feeds24[i-1].created_at) >= midnight) {
+      today += e;
+    }
   }
 
   document.getElementById("today_kwh").textContent = today.toFixed(1);
   document.getElementById("day24_kwh").textContent = day24.toFixed(1);
+  document.getElementById("today_coal").textContent = (today / COAL_KWH).toFixed(1);
+  document.getElementById("day24_coal").textContent = (day24 / COAL_KWH).toFixed(1);
+
+  /* ===== MĚSÍC ===== */
+  const feedsLong = await fetchFeeds(8000);
+  let month = 0;
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  for (let i = 1; i < feedsLong.length; i++) {
+    const tPrev = new Date(feedsLong[i-1].created_at);
+    if (tPrev < monthStart) continue;
+
+    const dT = feedsLong[i].field3 - feedsLong[i-1].field3;
+    if (dT > 0) {
+      month += energyFromDelta(dT);
+    }
+  }
+
   document.getElementById("month_kwh").textContent = month.toFixed(1);
+  document.getElementById("month_coal").textContent = (month / COAL_KWH).toFixed(1);
 
-  document.getElementById("today_coal").textContent = (today/COAL_KWH).toFixed(1);
-  document.getElementById("day24_coal").textContent = (day24/COAL_KWH).toFixed(1);
-  document.getElementById("month_coal").textContent = (month/COAL_KWH).toFixed(1);
-
-  const labels = feeds.map(f =>
+  /* ===== GRAF 24 H ===== */
+  const labels = feeds24.map(f =>
     new Date(f.created_at).toLocaleTimeString("cs-CZ",{hour:"2-digit",minute:"2-digit"})
   );
 
@@ -170,7 +209,7 @@ async function loadData() {
     {label:"Venkovní", field:"field4"}
   ].map(c => ({
     label: c.label,
-    data: feeds.map(f => f[c.field]),
+    data: feeds24.map(f => f[c.field]),
     borderWidth: 2,
     tension: 0.3
   }));
