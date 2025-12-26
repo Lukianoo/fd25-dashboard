@@ -138,12 +138,29 @@ let chart = null;
 const chartEl = document.getElementById('chart');
 
 function flowFromPump(power, mode) {
-  if (!power) return 0;
-  let factor = 1;
-  if (mode === 'cp') factor = 0.9;
-  if (mode === 'cs') factor = 1.1;
-  return power * 60 * factor;
+  if (!power || power <= 0) return 0;
+
+  // maximální fyzický průtok čerpadla (m3/h)
+  const MAX_FLOW = 2400; // l/h = 2.4 m3/h
+  const MIN_FLOW = 300;  // l/h – praktické minimum
+  const MAX_POWER = 45;  // W – typické max čerpadla
+
+  let modeFactor = 1;
+  if (mode === 'cp') modeFactor = 0.95;
+  if (mode === 'cs') modeFactor = 1.05;
+
+  // normalizace výkonu 0–1
+  let p = Math.min(power / MAX_POWER, 1);
+
+  // nelineární charakteristika čerpadla
+  let flow = MIN_FLOW + (MAX_FLOW - MIN_FLOW) * Math.sqrt(p);
+
+  flow *= modeFactor;
+
+  // fyzický limit
+  return Math.min(flow, MAX_FLOW);
 }
+
 
 pumpPower.value = localStorage.getItem('pumpPower') || 15;
 pumpMode.value = localStorage.getItem('pumpMode') || 'auto';
