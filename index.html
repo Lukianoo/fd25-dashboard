@@ -11,89 +11,64 @@ body {
   font-family: Arial, sans-serif;
   background:#0f172a;
   color:#e5e7eb;
-  margin:0;
   padding:20px;
 }
-h1 { margin-bottom:4px; }
-small { color:#94a3b8; }
-
-.section { margin-top:24px; }
-
 .grid {
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
   gap:16px;
 }
-
 .card {
   background:#020617;
   border-radius:16px;
   padding:16px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.4);
+  box-shadow:0 10px 25px rgba(0,0,0,.4);
 }
-
-.label {
-  font-size:0.9rem;
-  opacity:.8;
+.value { font-size:2rem; font-weight:bold; }
+.unit { opacity:.7; }
+.label { opacity:.8; font-size:.9rem; }
+input {
+  width:100%;
+  padding:6px;
+  background:#020617;
+  color:#e5e7eb;
+  border:1px solid #334155;
+  border-radius:8px;
 }
-
-.value {
-  font-size:2.1rem;
-  font-weight:bold;
-}
-
-.unit {
-  font-size:0.9rem;
-  opacity:.7;
-}
-
-canvas { margin-top:12px; }
+.section { margin-top:24px; }
 </style>
 </head>
 
 <body>
 
 <h1>🔥 Attack FD25 – Profi panel vytápění</h1>
-<small>Poslední aktualizace ThingSpeak: <span id="lastUpdate">–</span></small>
+<small>Poslední aktualizace: <span id="lastUpdate">–</span></small>
+
+<!-- NASTAVENÍ ČERPADLA -->
+<div class="section grid">
+  <div class="card">
+    <div class="label">Průtok topení (l/h)</div>
+    <input id="flowInput" type="number" value="800">
+    <small>např. ALPHA2 ≈ 600–1200 l/h</small>
+  </div>
+</div>
 
 <!-- TEPLOTY -->
 <div class="section grid">
-  <div class="card"><div class="label">Kotel</div><div class="value" id="f5">–</div><div class="unit">°C</div></div>
-  <div class="card"><div class="label">Výstup z kotle</div><div class="value" id="f2">–</div><div class="unit">°C</div></div>
-  <div class="card"><div class="label">Zpátečka kotle</div><div class="value" id="f1">–</div><div class="unit">°C</div></div>
-  <div class="card"><div class="label">ΔT (výstup − zpátečka)</div><div class="value" id="dt">–</div><div class="unit">°C</div></div>
-  <div class="card"><div class="label">Teplota TUV</div><div class="value" id="f3">–</div><div class="unit">°C</div></div>
-  <div class="card"><div class="label">Venkovní teplota</div><div class="value" id="f4">–</div><div class="unit">°C</div></div>
+  <div class="card"><div class="label">Výstup</div><div class="value" id="f2">–</div><div class="unit">°C</div></div>
+  <div class="card"><div class="label">Zpátečka</div><div class="value" id="f1">–</div><div class="unit">°C</div></div>
+  <div class="card"><div class="label">ΔT</div><div class="value" id="dt">–</div><div class="unit">°C</div></div>
+  <div class="card"><div class="label">TUV</div><div class="value" id="f3">–</div><div class="unit">°C</div></div>
 </div>
 
-<!-- SPOTŘEBA -->
+<!-- ENERGIE -->
 <div class="section grid">
-  <div class="card">
-    <div class="label">Denní energie – topení</div>
-    <div class="value" id="dayHeat">–</div>
-    <div class="unit">kWh</div>
-  </div>
-
-  <div class="card">
-    <div class="label">Měsíční energie – topení</div>
-    <div class="value" id="monthHeat">–</div>
-    <div class="unit">kWh</div>
-  </div>
-
-  <div class="card">
-    <div class="label">Uhlí – topení (tento měsíc)</div>
-    <div class="value" id="coalHeat">–</div>
-    <div class="unit">kg</div>
-  </div>
-
-  <div class="card">
-    <div class="label">Energie TUV – tento měsíc</div>
-    <div class="value" id="monthTUV">–</div>
-    <div class="unit">kWh</div>
-  </div>
+  <div class="card"><div class="label">Denní energie – topení</div><div class="value" id="dayHeat">–</div><div class="unit">kWh</div></div>
+  <div class="card"><div class="label">Měsíční energie – topení</div><div class="value" id="monthHeat">–</div><div class="unit">kWh</div></div>
+  <div class="card"><div class="label">Uhlí – topení (měsíc)</div><div class="value" id="coalHeat">–</div><div class="unit">kg</div></div>
+  <div class="card"><div class="label">Energie TUV – tento měsíc</div><div class="value" id="monthTUV">–</div><div class="unit">kWh</div></div>
 </div>
 
-<!-- GRAF -->
 <div class="section card">
   <h2>📈 Teploty – posledních 24 h</h2>
   <canvas id="chart"></canvas>
@@ -101,54 +76,47 @@ canvas { margin-top:12px; }
 
 <script>
 const CHANNEL_ID = 231269;
-const FLOW_LH = 1080;      // průtok topení [l/h]
-const BOILER_L = 125;      // objem bojleru
+const BOILER_L = 125;
 const COAL_PER_KWH = 0.27;
 
 async function loadData() {
-  const res = await fetch(`https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=96`);
+  const flow = parseFloat(document.getElementById('flowInput').value);
+  const res = await fetch(`https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=800`);
   const data = await res.json();
   const feeds = data.feeds;
-  if (feeds.length < 2) return;
 
   let dayHeat = 0;
   let monthHeat = 0;
   let monthTUV = 0;
 
   const now = new Date();
-  const currentMonth = now.getMonth();
+  const month = now.getMonth();
 
   for (let i = 1; i < feeds.length; i++) {
-    const a = feeds[i-1];
-    const b = feeds[i];
-
+    const a = feeds[i-1], b = feeds[i];
     const t1 = new Date(a.created_at);
     const t2 = new Date(b.created_at);
-    const hours = (t2 - t1) / 3600000;
-    if (hours <= 0 || hours > 1) continue;
+    const h = (t2 - t1) / 3600000;
+    if (h <= 0 || h > 1) continue;
 
     const out = parseFloat(b.field2);
     const ret = parseFloat(b.field1);
 
     if (!isNaN(out) && !isNaN(ret)) {
       const dT = out - ret;
-      const power = 0.00116 * FLOW_LH * dT;
-      const energy = power * hours;
+      const power = 1.163 * (flow/1000) * dT;
+      const e = power * h;
 
-      if (t2.getMonth() === currentMonth) {
-        monthHeat += energy;
-      }
-      if (t2.toDateString() === now.toDateString()) {
-        dayHeat += energy;
-      }
+      if (t2.toDateString() === now.toDateString()) dayHeat += e;
+      if (t2.getMonth() === month) monthHeat += e;
     }
 
     const tuvA = parseFloat(a.field3);
     const tuvB = parseFloat(b.field3);
     if (!isNaN(tuvA) && !isNaN(tuvB)) {
-      const dTtuv = tuvB - tuvA;
-      if (dTtuv > 3 && t2.getMonth() === currentMonth) {
-        monthTUV += BOILER_L * dTtuv * 0.001163;
+      const dTt = tuvB - tuvA;
+      if (dTt > 5 && t2.getMonth() === month) {
+        monthTUV += BOILER_L * dTt * 0.001163;
       }
     }
   }
@@ -157,12 +125,9 @@ async function loadData() {
   document.getElementById('lastUpdate').textContent =
     new Date(last.created_at).toLocaleString('cs-CZ');
 
-  document.getElementById('f1').textContent = parseFloat(last.field1).toFixed(1);
-  document.getElementById('f2').textContent = parseFloat(last.field2).toFixed(1);
-  document.getElementById('f3').textContent = parseFloat(last.field3).toFixed(1);
-  document.getElementById('f4').textContent = parseFloat(last.field4).toFixed(1);
-  document.getElementById('f5').textContent = parseFloat(last.field5).toFixed(1);
-
+  document.getElementById('f1').textContent = last.field1;
+  document.getElementById('f2').textContent = last.field2;
+  document.getElementById('f3').textContent = last.field3;
   document.getElementById('dt').textContent =
     (last.field2 - last.field1).toFixed(1);
 
@@ -172,40 +137,26 @@ async function loadData() {
     (monthHeat * COAL_PER_KWH).toFixed(0);
   document.getElementById('monthTUV').textContent = monthTUV.toFixed(1);
 
-  drawChart(feeds);
+  drawChart(feeds.slice(-96));
 }
 
 function drawChart(feeds) {
-  const labels = feeds.map(f =>
-    new Date(f.created_at).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'})
-  );
-
-  const datasets = [
-    {label:'Výstup', data:feeds.map(f=>f.field2)},
-    {label:'Zpátečka', data:feeds.map(f=>f.field1)},
-    {label:'TUV', data:feeds.map(f=>f.field3)},
-    {label:'Venkovní', data:feeds.map(f=>f.field4)}
-  ].map(d => ({
-    ...d,
-    borderWidth:2,
-    tension:.3
-  }));
-
   new Chart(document.getElementById('chart'), {
     type:'line',
-    data:{labels,datasets},
-    options:{
-      responsive:true,
-      plugins:{legend:{labels:{color:'#e5e7eb'}}},
-      scales:{
-        x:{ticks:{color:'#94a3b8'}},
-        y:{ticks:{color:'#94a3b8'}}
-      }
-    }
+    data:{
+      labels:feeds.map(f=>new Date(f.created_at).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'})),
+      datasets:[
+        {label:'Výstup', data:feeds.map(f=>f.field2)},
+        {label:'Zpátečka', data:feeds.map(f=>f.field1)},
+        {label:'TUV', data:feeds.map(f=>f.field3)}
+      ]
+    },
+    options:{responsive:true}
   });
 }
 
 loadData();
+document.getElementById('flowInput').addEventListener('change', loadData);
 </script>
 
 </body>
