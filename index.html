@@ -128,11 +128,15 @@ const BOILER_L = 125;
 const COLD_WATER = 10;
 const HOT_WATER = 50;
 
-let lastTime = null;
+let lastTimestamp = Number(localStorage.getItem('lastTimestamp')) || null;
+
+let dailyHeat = Number(localStorage.getItem('dailyHeat')) || 0;
+let dailyDate = localStorage.getItem('dailyDate') || new Date().toDateString();
+
 let lastTUV = null;
-let dailyHeat = 0;
 let monthlyHeat = 0;
 let monthlyTUV = Number(localStorage.getItem('monthlyTUV')) || 0;
+
 let chart = null;
 
 const chartEl = document.getElementById('chart');
@@ -181,6 +185,13 @@ async function loadData() {
 
   const last = feeds.at(-1);
   const time = new Date(last.created_at);
+// reset denní energie při změně dne
+const today = time.toDateString();
+if (dailyDate !== today) {
+  dailyHeat = 0;
+  dailyDate = today;
+  localStorage.setItem('dailyDate', dailyDate);
+}
 
   document.getElementById('lastUpdate').textContent =
     time.toLocaleString('cs-CZ');
