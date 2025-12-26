@@ -14,10 +14,8 @@ body {
   margin: 0;
   padding: 20px;
 }
-h1 {
-  font-size: 1.8rem;
-  margin-bottom: 10px;
-}
+h1 { font-size: 1.8rem; margin-bottom: 5px; }
+.update { opacity: 0.8; margin-bottom: 20px; }
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -30,28 +28,17 @@ h1 {
   box-shadow: 0 10px 25px rgba(0,0,0,0.4);
   text-align: center;
 }
-.value {
-  font-size: 2.2rem;
-  font-weight: bold;
-}
-.unit {
-  font-size: 1rem;
-  opacity: 0.7;
-}
-canvas {
-  margin-top: 10px;
-}
-.small {
-  font-size: 0.9rem;
-  opacity: 0.7;
-}
+.value { font-size: 2.2rem; font-weight: bold; }
+.unit { font-size: 1rem; opacity: 0.7; }
+.small { font-size: 0.9rem; opacity: 0.7; }
+canvas { margin-top: 10px; }
 </style>
 </head>
 
 <body>
 
 <h1>🔥 Attack FD25 – Rodinný dům</h1>
-<p>FD25 + bojler Dražice 125 l (TUV)</p>
+<div class="update" id="updated">Poslední aktualizace: –</div>
 
 <div class="grid">
   <div class="card"><div>Výstup z kotle</div><div class="value" id="f2">–</div><div class="unit">°C</div></div>
@@ -60,42 +47,53 @@ canvas {
   <div class="card"><div>TUV</div><div class="value" id="f3">–</div><div class="unit">°C</div></div>
   <div class="card"><div>Venkovní</div><div class="value" id="f4">–</div><div class="unit">°C</div></div>
 
-  <div class="card">
-    <div>ΔT (výstup − zpátečka)</div>
-    <div class="value" id="dt">–</div>
-    <div class="unit">°C</div>
-  </div>
+  <div class="card"><div>ΔT (výstup − zpátečka)</div><div class="value" id="dt">–</div><div class="unit">°C</div></div>
 
   <div class="card">
-    <div>Energie na ohřev TUV</div>
-    <div class="value" id="kwh">–</div>
+    <div>Denní energie TUV</div>
+    <div class="value" id="day_kwh">–</div>
     <div class="unit">kWh</div>
-    <div class="small">do 60 °C</div>
   </div>
 
   <div class="card">
-    <div>Hnědé uhlí Bílina</div>
-    <div class="value" id="coal">–</div>
+    <div>Denní uhlí Bílina</div>
+    <div class="value" id="day_coal">–</div>
     <div class="unit">kg</div>
-    <div class="small">účinnost 75 %</div>
+  </div>
+
+  <div class="card">
+    <div>Měsíční energie TUV</div>
+    <div class="value" id="month_kwh">–</div>
+    <div class="unit">kWh</div>
+  </div>
+
+  <div class="card">
+    <div>Měsíční uhlí Bílina</div>
+    <div class="value" id="month_coal">–</div>
+    <div class="unit">kg</div>
   </div>
 </div>
 
 <div class="card" style="margin-top:30px;">
-  <h2>📈 Historie teplot (24 h)</h2>
+  <h2>📈 Historie teplot</h2>
   <canvas id="chart"></canvas>
 </div>
 
 <script>
 const CHANNEL_ID = 231269;
-const RESULTS = 96;
+const RESULTS = 2880; // cca 30 dní (15 min)
 
 const BOJLER_L = 125;
-const TARGET_TUV = 60;
+const TARGET_TUV = 50;
 const ETA = 0.75;
 const COAL_KWH_KG = 5.0;
 
 let chart;
+
+function energyForTUV(tuv) {
+  const dT = Math.max(0, TARGET_TUV - tuv);
+  return (BOJLER_L * dT * 4.186) / 3600 / ETA;
+}
 
 async function loadData() {
   const url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=${RESULTS}`;
@@ -104,39 +102,46 @@ async function loadData() {
   const feeds = data.feeds;
   const last = feeds[feeds.length - 1];
 
+  document.getElementById('updated').textContent =
+    'Poslední aktualizace: ' +
+    new Date(last.created_at).toLocaleString('cs-CZ');
+
   for (let i = 1; i <= 5; i++) {
     const v = last[`field${i}`];
     document.getElementById(`f${i}`).textContent =
       v !== null ? Number(v).toFixed(1) : '–';
   }
 
-  // ΔT
-  const vystup = Number(last.field2);
-  const zpatecka = Number(last.field1);
-  const dt = vystup - zpatecka;
+  const dt = Number(last.field2) - Number(last.field1);
   document.getElementById('dt').textContent =
     !isNaN(dt) ? dt.toFixed(1) : '–';
 
-  // Energie TUV
-  const tuv = Number(last.field3);
-  if (!isNaN(tuv)) {
-    const deltaT = Math.max(0, TARGET_TUV - tuv);
-    const kwh = (BOJLER_L * deltaT * 4.186) / 3600 / ETA;
-    const coal = kwh / COAL_KWH_KG;
+  const now = new Date(last.created_at);
+  let dayKwh = 0;
+  let monthKwh = 0;
 
-    document.getElementById('kwh').textContent = kwh.toFixed(2);
-    document.getElementById('coal').textContent = coal.toFixed(2);
-  }
+  feeds.forEach(f => {
+    if (f.field3 === null) return;
+    const t = new Date(f.created_at);
+    const e = energyForTUV(Number(f.field3));
+
+    if ((now - t) / 36e5 <= 24) dayKwh += e;
+    if ((now - t) / 36e5 <= 24 * 30) monthKwh += e;
+  });
+
+  document.getElementById('day_kwh').textContent = dayKwh.toFixed(1);
+  document.getElementById('day_coal').textContent = (dayKwh / COAL_KWH_KG).toFixed(2);
+  document.getElementById('month_kwh').textContent = monthKwh.toFixed(1);
+  document.getElementById('month_coal').textContent = (monthKwh / COAL_KWH_KG).toFixed(2);
 
   const labels = feeds.map(f =>
-    new Date(f.created_at).toLocaleTimeString('cs-CZ', { hour:'2-digit', minute:'2-digit' })
+    new Date(f.created_at).toLocaleDateString('cs-CZ', { day:'2-digit', month:'2-digit' })
   );
 
   const datasets = [
     { label: 'Výstup', field: 'field2' },
     { label: 'Zpátečka', field: 'field1' },
-    { label: 'TUV', field: 'field3' },
-    { label: 'Venkovní', field: 'field4' }
+    { label: 'TUV', field: 'field3' }
   ].map(cfg => ({
     label: cfg.label,
     data: feeds.map(f => f[cfg.field]),
@@ -145,18 +150,10 @@ async function loadData() {
   }));
 
   if (chart) chart.destroy();
-
   chart = new Chart(document.getElementById('chart'), {
     type: 'line',
     data: { labels, datasets },
-    options: {
-      responsive: true,
-      plugins: { legend: { labels: { color: '#e5e7eb' } } },
-      scales: {
-        x: { ticks: { color: '#94a3b8' } },
-        y: { ticks: { color: '#94a3b8' } }
-      }
-    }
+    options: { responsive: true }
   });
 }
 
