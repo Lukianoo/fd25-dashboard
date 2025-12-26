@@ -14,13 +14,13 @@ body {
   margin:0;
   padding:20px;
 }
-h1 { margin-bottom:5px; }
+h1 { margin-bottom:4px; }
 small { color:#94a3b8; }
 
 .grid {
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:15px;
+  gap:14px;
 }
 .card {
   background:#020617;
@@ -29,7 +29,7 @@ small { color:#94a3b8; }
   box-shadow:0 8px 20px rgba(0,0,0,.4);
 }
 .value {
-  font-size:2.1rem;
+  font-size:2rem;
   font-weight:bold;
 }
 .unit { opacity:.7; }
@@ -37,18 +37,15 @@ small { color:#94a3b8; }
 input, select {
   width:100%;
   padding:6px;
-  margin-top:5px;
+  margin-top:6px;
   background:#020617;
   color:#e5e7eb;
   border:1px solid #334155;
   border-radius:6px;
 }
 
-.section {
-  margin-top:25px;
-}
-
-canvas { margin-top:15px; }
+.section { margin-top:22px; }
+canvas { margin-top:12px; }
 </style>
 </head>
 
@@ -57,20 +54,20 @@ canvas { margin-top:15px; }
 <h1>🔥 Attack FD25 – Profi panel vytápění</h1>
 <small>Poslední aktualizace: <span id="lastUpdate">–</span></small>
 
-<!-- ================= TEPLOTY ================= -->
+<!-- TEPLOTY -->
 <div class="section grid">
   <div class="card"><div>Kotel</div><div class="value" id="f5">–</div><div class="unit">°C</div></div>
   <div class="card"><div>Výstup</div><div class="value" id="f2">–</div><div class="unit">°C</div></div>
   <div class="card"><div>Zpátečka</div><div class="value" id="f1">–</div><div class="unit">°C</div></div>
-  <div class="card"><div>ΔT topení</div><div class="value" id="dt">–</div><div class="unit">°C</div></div>
+  <div class="card"><div>ΔT</div><div class="value" id="dt">–</div><div class="unit">°C</div></div>
   <div class="card"><div>TUV</div><div class="value" id="f3">–</div><div class="unit">°C</div></div>
   <div class="card"><div>Venkovní</div><div class="value" id="f4">–</div><div class="unit">°C</div></div>
 </div>
 
-<!-- ================= CERPADLO ================= -->
+<!-- CERPADLO -->
 <div class="section grid">
   <div class="card">
-    <div>Čerpadlo – příkon (W)</div>
+    <div>Příkon čerpadla (W)</div>
     <input id="pumpPower" type="number" step="1">
   </div>
   <div class="card">
@@ -93,31 +90,26 @@ canvas { margin-top:15px; }
   </div>
 </div>
 
-<!-- ================= SPOTREBA ================= -->
+<!-- SPOTREBA -->
 <div class="section grid">
   <div class="card">
-    <div>Denní energie – TOPENÍ</div>
-    <div class="value" id="dayHeat">–</div>
+    <div>Denní energie – topení</div>
+    <div class="value" id="dayHeat">0.0</div>
     <div class="unit">kWh</div>
   </div>
   <div class="card">
-    <div>Měsíční energie – TOPENÍ</div>
-    <div class="value" id="monthHeat">–</div>
+    <div>Měsíční energie – topení</div>
+    <div class="value" id="monthHeat">0</div>
     <div class="unit">kWh</div>
   </div>
   <div class="card">
-    <div>Uhlí – TOPENÍ (měsíc)</div>
-    <div class="value" id="coalHeat">–</div>
+    <div>Uhlí – topení (měsíc)</div>
+    <div class="value" id="coalHeat">0</div>
     <div class="unit">kg</div>
-  </div>
-  <div class="card">
-    <div>Energie TUV – tento měsíc<br><small id="tuvFrom">od –</small></div>
-    <div class="value" id="monthTUV">–</div>
-    <div class="unit">kWh</div>
   </div>
 </div>
 
-<!-- ================= GRAF ================= -->
+<!-- GRAF -->
 <div class="section card">
   <h3>📈 Teploty – posledních 24 h</h3>
   <canvas id="chart"></canvas>
@@ -128,46 +120,53 @@ const CHANNEL_ID = 231269;
 const RESULTS = 96;
 const COAL_PER_KWH = 0.27;
 
+let lastTime = null;
 let dailyHeat = 0;
 let monthlyHeat = 0;
-let monthlyTUV = 0;
-let lastTime = null;
-let chart;
+let chart = null;
+
+const chartEl = document.getElementById('chart');
 
 function flowFromPump(power, mode) {
+  if (!power) return 0;
   let factor = 1;
   if (mode === 'cp') factor = 0.9;
   if (mode === 'cs') factor = 1.1;
   return power * 60 * factor;
 }
 
-function savePump() {
-  localStorage.setItem('pumpPower', pumpPower.value);
-  localStorage.setItem('pumpMode', pumpMode.value);
-}
-
 pumpPower.value = localStorage.getItem('pumpPower') || 15;
 pumpMode.value = localStorage.getItem('pumpMode') || 'auto';
-pumpPower.onchange = savePump;
-pumpMode.onchange = savePump;
+pumpPower.onchange = () => localStorage.setItem('pumpPower', pumpPower.value);
+pumpMode.onchange = () => localStorage.setItem('pumpMode', pumpMode.value);
 
 async function loadData() {
   const res = await fetch(`https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=${RESULTS}`);
   const data = await res.json();
   const feeds = data.feeds;
+  if (!feeds.length) return;
+
   const last = feeds.at(-1);
+  const time = new Date(last.created_at);
 
   document.getElementById('lastUpdate').textContent =
-    new Date(last.created_at).toLocaleString('cs-CZ');
+    time.toLocaleString('cs-CZ');
 
-  const f = n => parseFloat(last[`field${n}`]);
-  document.getElementById('f1').textContent = f(1).toFixed(1);
-  document.getElementById('f2').textContent = f(2).toFixed(1);
-  document.getElementById('f3').textContent = f(3).toFixed(1);
-  document.getElementById('f4').textContent = f(4).toFixed(1);
-  document.getElementById('f5').textContent = f(5).toFixed(1);
+  function val(n) {
+    const v = parseFloat(last[`field${n}`]);
+    return isNaN(v) ? null : v;
+  }
 
-  const dt = f(2) - f(1);
+  const f1 = val(1), f2 = val(2), f3 = val(3), f4 = val(4), f5 = val(5);
+  if (f1==null || f2==null) return;
+
+  document.getElementById('f1').textContent = f1.toFixed(1);
+  document.getElementById('f2').textContent = f2.toFixed(1);
+  if (f3!=null) document.getElementById('f3').textContent = f3.toFixed(1);
+  if (f4!=null) document.getElementById('f4').textContent = f4.toFixed(1);
+  if (f5!=null) document.getElementById('f5').textContent = f5.toFixed(1);
+
+  const dt = f2 - f1;
   document.getElementById('dt').textContent = dt.toFixed(1);
 
   const flow = flowFromPump(+pumpPower.value, pumpMode.value);
@@ -176,24 +175,19 @@ async function loadData() {
   const powerHeat = 0.00116 * flow * dt;
   document.getElementById('powerHeat').textContent = powerHeat.toFixed(1);
 
-  const time = new Date(last.created_at);
   if (lastTime) {
     const hours = (time - lastTime) / 3600000;
-    dailyHeat += powerHeat * hours;
-    monthlyHeat += powerHeat * hours;
+    if (hours > 0 && hours < 1) {
+      dailyHeat += powerHeat * hours;
+      monthlyHeat += powerHeat * hours;
+    }
   }
   lastTime = time;
 
   document.getElementById('dayHeat').textContent = dailyHeat.toFixed(1);
   document.getElementById('monthHeat').textContent = monthlyHeat.toFixed(0);
-  document.getElementById('coalHeat').textContent = (monthlyHeat * COAL_PER_KWH).toFixed(0);
-
-  if (!localStorage.getItem('tuvStart')) {
-    localStorage.setItem('tuvStart', time.toLocaleDateString('cs-CZ'));
-  }
-  document.getElementById('tuvFrom').textContent =
-    "od " + localStorage.getItem('tuvStart');
-  document.getElementById('monthTUV').textContent = monthlyTUV.toFixed(1);
+  document.getElementById('coalHeat').textContent =
+    (monthlyHeat * COAL_PER_KWH).toFixed(0);
 
   drawChart(feeds);
 }
@@ -202,13 +196,13 @@ function drawChart(feeds) {
   const labels = feeds.map(f =>
     new Date(f.created_at).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'}));
 
-  const dataSets = [
+  const datasets = [
     {label:'Výstup', field:'field2'},
     {label:'Zpátečka', field:'field1'},
     {label:'TUV', field:'field3'}
   ].map(c => ({
     label:c.label,
-    data:feeds.map(f=>f[c.field]),
+    data:feeds.map(f => f[c.field]),
     borderWidth:2,
     tension:0.3
   }));
@@ -216,10 +210,13 @@ function drawChart(feeds) {
   if (chart) chart.destroy();
   chart = new Chart(chartEl, {
     type:'line',
-    data:{labels,datasets:dataSets},
+    data:{labels,datasets},
     options:{
       plugins:{legend:{labels:{color:'#e5e7eb'}}},
-      scales:{x:{ticks:{color:'#94a3b8'}},y:{ticks:{color:'#94a3b8'}}}
+      scales:{
+        x:{ticks:{color:'#94a3b8'}},
+        y:{ticks:{color:'#94a3b8'}}
+      }
     }
   });
 }
