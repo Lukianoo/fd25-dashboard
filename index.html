@@ -2,120 +2,211 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8" />
-<title>Attack FD25 – Přehled TUV</title>
+<title>Attack FD25 – Profi panel vytápění</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {
   font-family: Arial, sans-serif;
-  background: #0f172a;
+  background: #020617;
   color: #e5e7eb;
   margin: 0;
   padding: 20px;
 }
-h1 { margin-bottom: 5px; }
-.update { opacity: 0.8; margin-bottom: 20px; }
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+h1 {
+  font-size: 2rem;
+  margin: 0;
+}
+
+.update {
+  font-size: 1rem;
+  opacity: 0.8;
+}
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
 }
 
 .card {
-  background: #020617;
-  border-radius: 14px;
-  padding: 14px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  background: linear-gradient(180deg,#020617,#020617cc);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
   text-align: center;
 }
 
-.value { font-size: 2rem; font-weight: bold; }
-.unit { opacity: 0.7; }
+.card h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  opacity: 0.85;
+}
 
-canvas { margin-top: 10px; }
+.value {
+  font-size: 2.8rem;
+  font-weight: bold;
+}
+
+.unit {
+  font-size: 1rem;
+  opacity: 0.6;
+}
+
+.section {
+  margin-top: 30px;
+}
+
+canvas {
+  margin-top: 10px;
+}
 </style>
 </head>
 
 <body>
 
-<h1>🔥 Attack FD25 – TUV monitoring</h1>
-<div class="update" id="updated">Poslední aktualizace: –</div>
+<header>
+  <h1>🔥 Attack FD25 – Profi panel vytápění</h1>
+  <div class="update" id="updated">Aktualizace: –</div>
+</header>
 
+<!-- TEPLOTY -->
 <div class="grid">
-  <div class="card"><div>TUV</div><div class="value" id="tuv">–</div><div class="unit">°C</div></div>
+  <div class="card">
+    <h3>Kotel</h3>
+    <div class="value" id="kotel">–</div>
+    <div class="unit">°C</div>
+  </div>
 
-  <div class="card"><div>Denní energie TUV</div><div class="value" id="day_kwh">–</div><div class="unit">kWh</div></div>
-  <div class="card"><div>Denní spotřeba uhlí</div><div class="value" id="day_coal">–</div><div class="unit">kg</div></div>
+  <div class="card">
+    <h3>Výstup z kotle</h3>
+    <div class="value" id="vystup">–</div>
+    <div class="unit">°C</div>
+  </div>
 
-  <div class="card"><div>Měsíční energie TUV</div><div class="value" id="month_kwh">–</div><div class="unit">kWh</div></div>
-  <div class="card"><div>Měsíční spotřeba uhlí</div><div class="value" id="month_coal">–</div><div class="unit">kg</div></div>
+  <div class="card">
+    <h3>Zpátečka</h3>
+    <div class="value" id="zpat">–</div>
+    <div class="unit">°C</div>
+  </div>
+
+  <div class="card">
+    <h3>ΔT (výstup − zpátečka)</h3>
+    <div class="value" id="delta">–</div>
+    <div class="unit">°C</div>
+  </div>
+
+  <div class="card">
+    <h3>TUV</h3>
+    <div class="value" id="tuv">–</div>
+    <div class="unit">°C</div>
+  </div>
+
+  <div class="card">
+    <h3>Venkovní teplota</h3>
+    <div class="value" id="venek">–</div>
+    <div class="unit">°C</div>
+  </div>
 </div>
 
-<div class="card" style="margin-top:25px;">
-  <h3>📈 Teploty – posledních 24 h</h3>
+<!-- SPOTŘEBA -->
+<div class="section grid">
+  <div class="card">
+    <h3>Denní energie TUV</h3>
+    <div class="value" id="day_kwh">–</div>
+    <div class="unit">kWh</div>
+  </div>
+
+  <div class="card">
+    <h3>Denní uhlí (ekv.)</h3>
+    <div class="value" id="day_coal">–</div>
+    <div class="unit">kg</div>
+  </div>
+
+  <div class="card">
+    <h3>Energie TUV (24 h)</h3>
+    <div class="value" id="month_kwh">–</div>
+    <div class="unit">kWh</div>
+  </div>
+
+  <div class="card">
+    <h3>Uhlí (24 h)</h3>
+    <div class="value" id="month_coal">–</div>
+    <div class="unit">kg</div>
+  </div>
+</div>
+
+<!-- GRAF -->
+<div class="section card">
+  <h3>📈 Teploty – posledních 24 hodin</h3>
   <canvas id="chart"></canvas>
 </div>
 
 <script>
 const CHANNEL_ID = 231269;
-const RESULTS = 96; // 24 h (15 min)
+const RESULTS = 96; // 24 h
 
-const BOJLER_KG = 125;
+const BOJLER = 125;
 const CP = 4.186;
 const ETA = 0.75;
-const COAL_KWH_KG = 5.0;
+const COAL_KWH = 5.0;
 
 let chart;
 
 function energyFromDelta(dT) {
-  return BOJLER_KG * CP * dT / 3600 / ETA;
+  return BOJLER * CP * dT / 3600 / ETA;
 }
 
 async function loadData() {
-  const url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=${RESULTS}`;
-  const res = await fetch(url);
+  const res = await fetch(
+    `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=${RESULTS}`
+  );
   const data = await res.json();
   const feeds = data.feeds;
-
   const last = feeds[feeds.length - 1];
-  document.getElementById('updated').textContent =
-    'Poslední aktualizace: ' +
-    new Date(last.created_at).toLocaleString('cs-CZ');
 
-  document.getElementById('tuv').textContent =
-    Number(last.field3).toFixed(1);
+  document.getElementById("updated").textContent =
+    "Aktualizace: " + new Date(last.created_at).toLocaleString("cs-CZ");
 
-  let dayKwh = 0;
-  let monthKwh = 0;
+  const vystup = Number(last.field2);
+  const zpat = Number(last.field1);
 
+  document.getElementById("kotel").textContent = Number(last.field5).toFixed(1);
+  document.getElementById("vystup").textContent = vystup.toFixed(1);
+  document.getElementById("zpat").textContent = zpat.toFixed(1);
+  document.getElementById("delta").textContent = (vystup - zpat).toFixed(1);
+  document.getElementById("tuv").textContent = Number(last.field3).toFixed(1);
+  document.getElementById("venek").textContent = Number(last.field4).toFixed(1);
+
+  let energy = 0;
   for (let i = 1; i < feeds.length; i++) {
-    const prev = Number(feeds[i - 1].field3);
-    const curr = Number(feeds[i].field3);
-    if (isNaN(prev) || isNaN(curr)) continue;
-
-    const delta = curr - prev;
-    if (delta > 0) {
-      const e = energyFromDelta(delta);
-      dayKwh += e;
-      monthKwh += e; // zatím posledních 24 h = měsíc řešíme zvlášť
-    }
+    const dT = feeds[i].field3 - feeds[i - 1].field3;
+    if (dT > 0) energy += energyFromDelta(dT);
   }
 
-  document.getElementById('day_kwh').textContent = dayKwh.toFixed(2);
-  document.getElementById('day_coal').textContent = (dayKwh / COAL_KWH_KG).toFixed(2);
-  document.getElementById('month_kwh').textContent = monthKwh.toFixed(2);
-  document.getElementById('month_coal').textContent = (monthKwh / COAL_KWH_KG).toFixed(2);
+  document.getElementById("day_kwh").textContent = energy.toFixed(1);
+  document.getElementById("day_coal").textContent = (energy / COAL_KWH).toFixed(1);
+  document.getElementById("month_kwh").textContent = energy.toFixed(1);
+  document.getElementById("month_coal").textContent = (energy / COAL_KWH).toFixed(1);
 
   const labels = feeds.map(f =>
-    new Date(f.created_at).toLocaleTimeString('cs-CZ', {hour:'2-digit', minute:'2-digit'})
+    new Date(f.created_at).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })
   );
 
   const datasets = [
-    { label: 'Výstup', field: 'field2' },
-    { label: 'Zpátečka', field: 'field1' },
-    { label: 'TUV', field: 'field3' }
+    { label: "Výstup", field: "field2" },
+    { label: "Zpátečka", field: "field1" },
+    { label: "TUV", field: "field3" },
+    { label: "Venkovní", field: "field4" }
   ].map(cfg => ({
     label: cfg.label,
     data: feeds.map(f => f[cfg.field]),
@@ -124,15 +215,14 @@ async function loadData() {
   }));
 
   if (chart) chart.destroy();
-  chart = new Chart(document.getElementById('chart'), {
-    type: 'line',
+  chart = new Chart(document.getElementById("chart"), {
+    type: "line",
     data: { labels, datasets },
     options: {
-      responsive: true,
-      plugins: { legend: { labels: { color: '#e5e7eb' } } },
+      plugins: { legend: { labels: { color: "#e5e7eb" } } },
       scales: {
-        x: { ticks: { color: '#94a3b8' } },
-        y: { ticks: { color: '#94a3b8' } }
+        x: { ticks: { color: "#94a3b8" } },
+        y: { ticks: { color: "#94a3b8" } }
       }
     }
   });
