@@ -154,8 +154,8 @@ async function loadData() {
   }
 
   document.getElementById('energyDay').textContent = r1(eDay);
-  document.getElementById('coalDay').textContent   = r1(eDay / COAL_KWH_PER_KG);
-  document.getElementById('energyMonth').textContent = r1(eMonth);
+  document.getElementById('coalDay').textContent   = r1(eDay * COAL_KG_PER_KWH);
+document.getElementById('coalMonth').textContent = r1(eMonth * COAL_KG_PER_KWH);
   document.getElementById('coalMonth').textContent   = r1(eMonth / COAL_KWH_PER_KG);
 
   /* ==== GRAF 24 H ==== */
