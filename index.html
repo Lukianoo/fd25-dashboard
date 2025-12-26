@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8" />
-<title>Attack FD25 – Přehled teplot</title>
+<title>Attack FD25 – Přehled TUV</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -14,85 +14,63 @@ body {
   margin: 0;
   padding: 20px;
 }
-h1 { font-size: 1.8rem; margin-bottom: 5px; }
+h1 { margin-bottom: 5px; }
 .update { opacity: 0.8; margin-bottom: 20px; }
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
 }
+
 .card {
   background: #020617;
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
   text-align: center;
 }
-.value { font-size: 2.2rem; font-weight: bold; }
-.unit { font-size: 1rem; opacity: 0.7; }
-.small { font-size: 0.9rem; opacity: 0.7; }
+
+.value { font-size: 2rem; font-weight: bold; }
+.unit { opacity: 0.7; }
+
 canvas { margin-top: 10px; }
 </style>
 </head>
 
 <body>
 
-<h1>🔥 Attack FD25 – Rodinný dům</h1>
+<h1>🔥 Attack FD25 – TUV monitoring</h1>
 <div class="update" id="updated">Poslední aktualizace: –</div>
 
 <div class="grid">
-  <div class="card"><div>Výstup z kotle</div><div class="value" id="f2">–</div><div class="unit">°C</div></div>
-  <div class="card"><div>Kotel</div><div class="value" id="f5">–</div><div class="unit">°C</div></div>
-  <div class="card"><div>Zpátečka</div><div class="value" id="f1">–</div><div class="unit">°C</div></div>
-  <div class="card"><div>TUV</div><div class="value" id="f3">–</div><div class="unit">°C</div></div>
-  <div class="card"><div>Venkovní</div><div class="value" id="f4">–</div><div class="unit">°C</div></div>
+  <div class="card"><div>TUV</div><div class="value" id="tuv">–</div><div class="unit">°C</div></div>
 
-  <div class="card"><div>ΔT (výstup − zpátečka)</div><div class="value" id="dt">–</div><div class="unit">°C</div></div>
+  <div class="card"><div>Denní energie TUV</div><div class="value" id="day_kwh">–</div><div class="unit">kWh</div></div>
+  <div class="card"><div>Denní spotřeba uhlí</div><div class="value" id="day_coal">–</div><div class="unit">kg</div></div>
 
-  <div class="card">
-    <div>Denní energie TUV</div>
-    <div class="value" id="day_kwh">–</div>
-    <div class="unit">kWh</div>
-  </div>
-
-  <div class="card">
-    <div>Denní uhlí Bílina</div>
-    <div class="value" id="day_coal">–</div>
-    <div class="unit">kg</div>
-  </div>
-
-  <div class="card">
-    <div>Měsíční energie TUV</div>
-    <div class="value" id="month_kwh">–</div>
-    <div class="unit">kWh</div>
-  </div>
-
-  <div class="card">
-    <div>Měsíční uhlí Bílina</div>
-    <div class="value" id="month_coal">–</div>
-    <div class="unit">kg</div>
-  </div>
+  <div class="card"><div>Měsíční energie TUV</div><div class="value" id="month_kwh">–</div><div class="unit">kWh</div></div>
+  <div class="card"><div>Měsíční spotřeba uhlí</div><div class="value" id="month_coal">–</div><div class="unit">kg</div></div>
 </div>
 
-<div class="card" style="margin-top:30px;">
-  <h2>📈 Historie teplot</h2>
+<div class="card" style="margin-top:25px;">
+  <h3>📈 Teploty – posledních 24 h</h3>
   <canvas id="chart"></canvas>
 </div>
 
 <script>
 const CHANNEL_ID = 231269;
-const RESULTS = 2880; // cca 30 dní (15 min)
+const RESULTS = 96; // 24 h (15 min)
 
-const BOJLER_L = 125;
-const TARGET_TUV = 50;
+const BOJLER_KG = 125;
+const CP = 4.186;
 const ETA = 0.75;
 const COAL_KWH_KG = 5.0;
 
 let chart;
 
-function energyForTUV(tuv) {
-  const dT = Math.max(0, TARGET_TUV - tuv);
-  return (BOJLER_L * dT * 4.186) / 3600 / ETA;
+function energyFromDelta(dT) {
+  return BOJLER_KG * CP * dT / 3600 / ETA;
 }
 
 async function loadData() {
@@ -100,42 +78,38 @@ async function loadData() {
   const res = await fetch(url);
   const data = await res.json();
   const feeds = data.feeds;
-  const last = feeds[feeds.length - 1];
 
+  const last = feeds[feeds.length - 1];
   document.getElementById('updated').textContent =
     'Poslední aktualizace: ' +
     new Date(last.created_at).toLocaleString('cs-CZ');
 
-  for (let i = 1; i <= 5; i++) {
-    const v = last[`field${i}`];
-    document.getElementById(`f${i}`).textContent =
-      v !== null ? Number(v).toFixed(1) : '–';
-  }
+  document.getElementById('tuv').textContent =
+    Number(last.field3).toFixed(1);
 
-  const dt = Number(last.field2) - Number(last.field1);
-  document.getElementById('dt').textContent =
-    !isNaN(dt) ? dt.toFixed(1) : '–';
-
-  const now = new Date(last.created_at);
   let dayKwh = 0;
   let monthKwh = 0;
 
-  feeds.forEach(f => {
-    if (f.field3 === null) return;
-    const t = new Date(f.created_at);
-    const e = energyForTUV(Number(f.field3));
+  for (let i = 1; i < feeds.length; i++) {
+    const prev = Number(feeds[i - 1].field3);
+    const curr = Number(feeds[i].field3);
+    if (isNaN(prev) || isNaN(curr)) continue;
 
-    if ((now - t) / 36e5 <= 24) dayKwh += e;
-    if ((now - t) / 36e5 <= 24 * 30) monthKwh += e;
-  });
+    const delta = curr - prev;
+    if (delta > 0) {
+      const e = energyFromDelta(delta);
+      dayKwh += e;
+      monthKwh += e; // zatím posledních 24 h = měsíc řešíme zvlášť
+    }
+  }
 
-  document.getElementById('day_kwh').textContent = dayKwh.toFixed(1);
+  document.getElementById('day_kwh').textContent = dayKwh.toFixed(2);
   document.getElementById('day_coal').textContent = (dayKwh / COAL_KWH_KG).toFixed(2);
-  document.getElementById('month_kwh').textContent = monthKwh.toFixed(1);
+  document.getElementById('month_kwh').textContent = monthKwh.toFixed(2);
   document.getElementById('month_coal').textContent = (monthKwh / COAL_KWH_KG).toFixed(2);
 
   const labels = feeds.map(f =>
-    new Date(f.created_at).toLocaleDateString('cs-CZ', { day:'2-digit', month:'2-digit' })
+    new Date(f.created_at).toLocaleTimeString('cs-CZ', {hour:'2-digit', minute:'2-digit'})
   );
 
   const datasets = [
@@ -153,7 +127,14 @@ async function loadData() {
   chart = new Chart(document.getElementById('chart'), {
     type: 'line',
     data: { labels, datasets },
-    options: { responsive: true }
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#e5e7eb' } } },
+      scales: {
+        x: { ticks: { color: '#94a3b8' } },
+        y: { ticks: { color: '#94a3b8' } }
+      }
+    }
   });
 }
 
