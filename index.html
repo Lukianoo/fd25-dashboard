@@ -16,7 +16,7 @@ body {
 }
 h1 {
   font-size: 1.8rem;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 .grid {
   display: grid;
@@ -41,28 +41,43 @@ h1 {
 canvas {
   margin-top: 10px;
 }
+.small {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
 </style>
 </head>
 
 <body>
 
 <h1>🔥 Attack FD25 – Rodinný dům</h1>
-<p>Automatický kotel FD25 + bojler 125 l</p>
+<p>FD25 + bojler Dražice 125 l (TUV)</p>
 
 <div class="grid">
-  <!-- PROHOZENO -->
   <div class="card"><div>Výstup z kotle</div><div class="value" id="f2">–</div><div class="unit">°C</div></div>
   <div class="card"><div>Kotel</div><div class="value" id="f5">–</div><div class="unit">°C</div></div>
+  <div class="card"><div>Zpátečka</div><div class="value" id="f1">–</div><div class="unit">°C</div></div>
+  <div class="card"><div>TUV</div><div class="value" id="f3">–</div><div class="unit">°C</div></div>
+  <div class="card"><div>Venkovní</div><div class="value" id="f4">–</div><div class="unit">°C</div></div>
 
-  <div class="card"><div>Zpátečka kotle</div><div class="value" id="f1">–</div><div class="unit">°C</div></div>
-  <div class="card"><div>Teplota TUV</div><div class="value" id="f3">–</div><div class="unit">°C</div></div>
-  <div class="card"><div>Venkovní teplota</div><div class="value" id="f4">–</div><div class="unit">°C</div></div>
-
-  <!-- ΔT -->
   <div class="card">
-    <div>ΔT (Výstup − Zpátečka)</div>
+    <div>ΔT (výstup − zpátečka)</div>
     <div class="value" id="dt">–</div>
     <div class="unit">°C</div>
+  </div>
+
+  <div class="card">
+    <div>Energie na ohřev TUV</div>
+    <div class="value" id="kwh">–</div>
+    <div class="unit">kWh</div>
+    <div class="small">do 60 °C</div>
+  </div>
+
+  <div class="card">
+    <div>Hnědé uhlí Bílina</div>
+    <div class="value" id="coal">–</div>
+    <div class="unit">kg</div>
+    <div class="small">účinnost 75 %</div>
   </div>
 </div>
 
@@ -74,33 +89,13 @@ canvas {
 <script>
 const CHANNEL_ID = 231269;
 const RESULTS = 96;
-let chart;
 
-/* Popisky na konci křivek */
-const lineLabelsPlugin = {
-  id: 'lineLabels',
-  afterDatasetsDraw(chart) {
-    const { ctx } = chart;
-    ctx.save();
-    chart.data.datasets.forEach((dataset, i) => {
-      const meta = chart.getDatasetMeta(i);
-      if (!meta.hidden) {
-        const lastPoint = meta.data[meta.data.length - 1];
-        const value = dataset.data[dataset.data.length - 1];
-        if (value !== null) {
-          ctx.fillStyle = dataset.borderColor || '#fff';
-          ctx.font = '12px Arial';
-          ctx.fillText(
-            `${dataset.label}: ${Number(value).toFixed(1)}°C`,
-            lastPoint.x + 6,
-            lastPoint.y + 4
-          );
-        }
-      }
-    });
-    ctx.restore();
-  }
-};
+const BOJLER_L = 125;
+const TARGET_TUV = 60;
+const ETA = 0.75;
+const COAL_KWH_KG = 5.0;
+
+let chart;
 
 async function loadData() {
   const url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=${RESULTS}`;
@@ -109,40 +104,42 @@ async function loadData() {
   const feeds = data.feeds;
   const last = feeds[feeds.length - 1];
 
-  // KARTY
   for (let i = 1; i <= 5; i++) {
-    const val = last[`field${i}`];
+    const v = last[`field${i}`];
     document.getElementById(`f${i}`).textContent =
-      val !== null ? Number(val).toFixed(1) : '–';
+      v !== null ? Number(v).toFixed(1) : '–';
   }
 
-  // ΔT = výstup (field2) − zpátečka (field1)
+  // ΔT
   const vystup = Number(last.field2);
   const zpatecka = Number(last.field1);
+  const dt = vystup - zpatecka;
   document.getElementById('dt').textContent =
-    !isNaN(vystup) && !isNaN(zpatecka)
-      ? (vystup - zpatecka).toFixed(1)
-      : '–';
+    !isNaN(dt) ? dt.toFixed(1) : '–';
+
+  // Energie TUV
+  const tuv = Number(last.field3);
+  if (!isNaN(tuv)) {
+    const deltaT = Math.max(0, TARGET_TUV - tuv);
+    const kwh = (BOJLER_L * deltaT * 4.186) / 3600 / ETA;
+    const coal = kwh / COAL_KWH_KG;
+
+    document.getElementById('kwh').textContent = kwh.toFixed(2);
+    document.getElementById('coal').textContent = coal.toFixed(2);
+  }
 
   const labels = feeds.map(f =>
-    new Date(f.created_at).toLocaleTimeString('cs-CZ', {
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    new Date(f.created_at).toLocaleTimeString('cs-CZ', { hour:'2-digit', minute:'2-digit' })
   );
 
-  // PROHOZENO I V GRAFU
   const datasets = [
-    { label: 'Výstup z kotle', field: 'field2' },
-    { label: 'Kotel', field: 'field5' },
-    { label: 'Zpátečka kotle', field: 'field1' },
+    { label: 'Výstup', field: 'field2' },
+    { label: 'Zpátečka', field: 'field1' },
     { label: 'TUV', field: 'field3' },
-    { label: 'Venkovní teplota', field: 'field4' }
+    { label: 'Venkovní', field: 'field4' }
   ].map(cfg => ({
     label: cfg.label,
-    data: feeds.map(f =>
-      f[cfg.field] !== null ? Number(f[cfg.field]).toFixed(1) : null
-    ),
+    data: feeds.map(f => f[cfg.field]),
     borderWidth: 2,
     tension: 0.3
   }));
@@ -154,17 +151,12 @@ async function loadData() {
     data: { labels, datasets },
     options: {
       responsive: true,
-      plugins: {
-        legend: {
-          labels: { color: '#e5e7eb' }
-        }
-      },
+      plugins: { legend: { labels: { color: '#e5e7eb' } } },
       scales: {
         x: { ticks: { color: '#94a3b8' } },
         y: { ticks: { color: '#94a3b8' } }
       }
-    },
-    plugins: [lineLabelsPlugin]
+    }
   });
 }
 
