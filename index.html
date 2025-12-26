@@ -128,7 +128,7 @@ const BOILER_L = 125;
 const COLD_WATER = 10;
 const HOT_WATER = 50;
 
-let lastTimestamp = Number(localStorage.getItem('lastTimestamp')) || null;
+let lastCalcTime = Date.now();
 
 let dailyHeat = Number(localStorage.getItem('dailyHeat')) || 0;
 let dailyDate = localStorage.getItem('dailyDate') || new Date().toDateString();
@@ -219,16 +219,15 @@ if (dailyDate !== today) {
   const powerHeat = 0.00116 * flow * dt;
   document.getElementById('powerHeat').textContent = powerHeat.toFixed(1);
 
-  if (lastTimestamp) {
-  const hours = (time - lastTimestamp) / 3600000;
-  if (hours > 0 && hours < 2) {
-    dailyHeat += powerHeat * hours;
-    monthlyHeat += powerHeat * hours;
-  }
+ const now = Date.now();
+const hours = (now - lastCalcTime) / 3600000;
+
+if (hours > 0 && hours < 0.5) {
+  dailyHeat += powerHeat * hours;
+  monthlyHeat += powerHeat * hours;
 }
 
-lastTimestamp = time;
-localStorage.setItem('lastTimestamp', lastTimestamp);
+lastCalcTime = now;
 localStorage.setItem('dailyHeat', dailyHeat);
 
 
