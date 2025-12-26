@@ -219,14 +219,18 @@ if (dailyDate !== today) {
   const powerHeat = 0.00116 * flow * dt;
   document.getElementById('powerHeat').textContent = powerHeat.toFixed(1);
 
-  if (lastTime) {
-    const hours = (time - lastTime) / 3600000;
-    if (hours > 0 && hours < 1) {
-      dailyHeat += powerHeat * hours;
-      monthlyHeat += powerHeat * hours;
-    }
+  if (lastTimestamp) {
+  const hours = (time - lastTimestamp) / 3600000;
+  if (hours > 0 && hours < 2) {
+    dailyHeat += powerHeat * hours;
+    monthlyHeat += powerHeat * hours;
   }
-  lastTime = time;
+}
+
+lastTimestamp = time;
+localStorage.setItem('lastTimestamp', lastTimestamp);
+localStorage.setItem('dailyHeat', dailyHeat);
+
 
   // TUV výpočet
   if (lastTUV !== null && f3 !== null) {
