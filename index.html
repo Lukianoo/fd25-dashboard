@@ -14,55 +14,74 @@ body {
     background: #0f172a;
     color: #e5e7eb;
 }
+
+/* ===== HLAVIČKA ===== */
 header {
     background: #020617;
     padding: 15px 30px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    gap: 20px;
     border-bottom: 2px solid #1e293b;
+    flex-wrap: nowrap;
 }
-h1 {
-    margin: 0;
+
+.header-left {
     font-size: 22px;
+    font-weight: 600;
+    white-space: nowrap;
 }
-.time {
-    text-align: right;
-    font-size: 14px;
+
+.header-right {
+    display: flex;
+    gap: 25px;
+    font-size: 22px;
+    font-weight: 600;
     color: #94a3b8;
+    white-space: nowrap;
 }
+
+/* ===== OBSAH ===== */
 .container {
     padding: 25px;
 }
+
 .cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
     gap: 20px;
 }
+
 .card {
     background: #020617;
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 0 25px rgba(0,0,0,0.4);
 }
+
 .card h2 {
     margin: 0;
     font-size: 15px;
     color: #94a3b8;
 }
+
 .value {
     font-size: 36px;
     margin-top: 10px;
 }
+
 .unit {
     font-size: 16px;
     color: #94a3b8;
 }
+
 canvas {
     background: #020617;
     border-radius: 12px;
     padding: 15px;
 }
+
 .footer {
     margin-top: 10px;
     font-size: 13px;
@@ -75,10 +94,11 @@ canvas {
 <body>
 
 <header>
-    <h1>🔥 Panel kotelny</h1>
-    <div class="time">
-        <div id="now"></div>
-        <div>Poslední aktualizace: <span id="lastUpdate">–</span></div>
+    <div class="header-left">🔥 Panel kotelny</div>
+
+    <div class="header-right">
+        <div id="now">–</div>
+        <div>Aktualizace: <span id="lastUpdate">–</span></div>
     </div>
 </header>
 
@@ -120,9 +140,10 @@ canvas {
 const CHANNEL = 1957585;
 const URL = `https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?results=288`;
 
-const BOJLER_OBJEM_L = 120; // změň dle skutečnosti
+const BOJLER_OBJEM_L = 120; // litry
 const C = 4.186; // kJ/kg·K
 
+/* ===== DATUM A ČAS ===== */
 function updateTime() {
     document.getElementById("now").innerText =
         new Date().toLocaleString("cs-CZ");
@@ -130,31 +151,35 @@ function updateTime() {
 setInterval(updateTime, 1000);
 updateTime();
 
+/* ===== DATA Z THINGSPEAK ===== */
 fetch(URL)
 .then(r => r.json())
 .then(data => {
     const feeds = data.feeds;
-
     const last = feeds[feeds.length - 1];
+
     document.getElementById("kotel").innerText = Number(last.field1).toFixed(1);
     document.getElementById("bojler").innerText = Number(last.field2).toFixed(1);
     document.getElementById("venku").innerText = Number(last.field3).toFixed(1);
+
     document.getElementById("lastUpdate").innerText =
         new Date(last.created_at).toLocaleString("cs-CZ");
 
-    // 24h data
-    const labels = feeds.map(f => new Date(f.created_at).toLocaleTimeString("cs-CZ"));
+    /* 24h DATA */
+    const labels = feeds.map(f =>
+        new Date(f.created_at).toLocaleTimeString("cs-CZ")
+    );
+
     const kotel = feeds.map(f => Number(f.field1));
     const bojler = feeds.map(f => Number(f.field2));
     const venku = feeds.map(f => Number(f.field3));
 
-    // Výpočet energie
-    const T1 = bojler[0];
-    const T2 = bojler[bojler.length - 1];
-    const dT = Math.max(T2 - T1, 0);
+    /* ENERGIE BOJLER */
+    const dT = Math.max(bojler[bojler.length - 1] - bojler[0], 0);
     const energie = (BOJLER_OBJEM_L * C * dT) / 3600;
     document.getElementById("energie").innerText = energie.toFixed(2);
 
+    /* GRAF */
     new Chart(document.getElementById("chart"), {
         type: "line",
         data: {
