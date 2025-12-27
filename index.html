@@ -8,23 +8,41 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+/* ===== TÉMATA ===== */
+:root {
+    --bg: #0f172a;
+    --panel: #020617;
+    --text: #e5e7eb;
+    --muted: #94a3b8;
+    --border: #1e293b;
+}
+
+.light {
+    --bg: #f1f5f9;
+    --panel: #ffffff;
+    --text: #020617;
+    --muted: #475569;
+    --border: #cbd5f5;
+}
+
+/* ===== ZÁKLAD ===== */
 body {
     margin: 0;
     font-family: "Segoe UI", sans-serif;
-    background: #0f172a;
-    color: #e5e7eb;
+    background: var(--bg);
+    color: var(--text);
+    transition: background .3s, color .3s;
 }
 
 /* ===== HLAVIČKA ===== */
 header {
-    background: #020617;
-    padding: 15px 30px;
+    background: var(--panel);
+    padding: 12px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
-    border-bottom: 2px solid #1e293b;
-    flex-wrap: nowrap;
+    gap: 15px;
+    border-bottom: 2px solid var(--border);
 }
 
 .header-left {
@@ -35,16 +53,26 @@ header {
 
 .header-right {
     display: flex;
-    gap: 25px;
+    align-items: center;
+    gap: 18px;
     font-size: 22px;
     font-weight: 600;
-    color: #94a3b8;
+    color: var(--muted);
     white-space: nowrap;
+}
+
+.header-right button {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 4px 8px;
+    cursor: pointer;
 }
 
 /* ===== OBSAH ===== */
 .container {
-    padding: 25px;
+    padding: 20px;
 }
 
 .cards {
@@ -54,39 +82,55 @@ header {
 }
 
 .card {
-    background: #020617;
+    background: var(--panel);
     border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 0 25px rgba(0,0,0,0.4);
+    padding: 18px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.35);
 }
 
 .card h2 {
     margin: 0;
     font-size: 15px;
-    color: #94a3b8;
+    color: var(--muted);
 }
 
 .value {
     font-size: 36px;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
 .unit {
     font-size: 16px;
-    color: #94a3b8;
+    color: var(--muted);
 }
 
 canvas {
-    background: #020617;
+    background: var(--panel);
     border-radius: 12px;
-    padding: 15px;
+    padding: 12px;
 }
 
 .footer {
     margin-top: 10px;
     font-size: 13px;
-    color: #64748b;
+    color: var(--muted);
     text-align: right;
+}
+
+/* ===== MOBIL ===== */
+@media (max-width: 600px) {
+    .header-left,
+    .header-right {
+        font-size: 16px;
+    }
+
+    .cards {
+        grid-template-columns: 1fr;
+    }
+
+    .value {
+        font-size: 30px;
+    }
 }
 </style>
 </head>
@@ -99,6 +143,8 @@ canvas {
     <div class="header-right">
         <div id="now">–</div>
         <div>Aktualizace: <span id="lastUpdate">–</span></div>
+        <button onclick="toggleTheme()">🌓</button>
+        <button onclick="toggleFullscreen()">⛶</button>
     </div>
 </header>
 
@@ -121,7 +167,7 @@ canvas {
     </div>
 
     <div class="card">
-        <h2>Spotřeba ohřevu bojleru (24h)</h2>
+        <h2>Energie pro ohřev bojleru (24 h)</h2>
         <div class="value"><span id="energie">–</span><span class="unit"> kWh</span></div>
     </div>
 </div>
@@ -137,67 +183,78 @@ canvas {
 </div>
 
 <script>
+/* ===== NASTAVENÍ ===== */
 const CHANNEL = 1957585;
 const URL = `https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?results=288`;
+const BOJLER_OBJEM_L = 120;
+const C = 4.186;
 
-const BOJLER_OBJEM_L = 120; // litry
-const C = 4.186; // kJ/kg·K
+/* ===== TÉMA ===== */
+function toggleTheme() {
+    document.body.classList.toggle("light");
+    localStorage.setItem("theme",
+        document.body.classList.contains("light") ? "light" : "dark");
+}
+if (localStorage.getItem("theme") === "light") {
+    document.body.classList.add("light");
+}
 
-/* ===== DATUM A ČAS ===== */
+/* ===== FULLSCREEN ===== */
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+/* ===== ČAS (bez datumu) ===== */
 function updateTime() {
     document.getElementById("now").innerText =
-        new Date().toLocaleString("cs-CZ");
+        new Date().toLocaleTimeString("cs-CZ");
 }
 setInterval(updateTime, 1000);
 updateTime();
 
-/* ===== DATA Z THINGSPEAK ===== */
+/* ===== DATA ===== */
 fetch(URL)
 .then(r => r.json())
 .then(data => {
     const feeds = data.feeds;
-    const last = feeds[feeds.length - 1];
+    const last = feeds.at(-1);
 
-    document.getElementById("kotel").innerText = Number(last.field1).toFixed(1);
-    document.getElementById("bojler").innerText = Number(last.field2).toFixed(1);
-    document.getElementById("venku").innerText = Number(last.field3).toFixed(1);
+    kotel.innerText = (+last.field1).toFixed(1);
+    bojler.innerText = (+last.field2).toFixed(1);
+    venku.innerText = (+last.field3).toFixed(1);
 
-    document.getElementById("lastUpdate").innerText =
-        new Date(last.created_at).toLocaleString("cs-CZ");
+    lastUpdate.innerText =
+        new Date(last.created_at).toLocaleTimeString("cs-CZ");
 
-    /* 24h DATA */
     const labels = feeds.map(f =>
         new Date(f.created_at).toLocaleTimeString("cs-CZ")
     );
 
-    const kotel = feeds.map(f => Number(f.field1));
-    const bojler = feeds.map(f => Number(f.field2));
-    const venku = feeds.map(f => Number(f.field3));
+    const bojlerData = feeds.map(f => +f.field2);
 
-    /* ENERGIE BOJLER */
-    const dT = Math.max(bojler[bojler.length - 1] - bojler[0], 0);
+    const dT = Math.max(bojlerData.at(-1) - bojlerData[0], 0);
     const energie = (BOJLER_OBJEM_L * C * dT) / 3600;
     document.getElementById("energie").innerText = energie.toFixed(2);
 
-    /* GRAF */
-    new Chart(document.getElementById("chart"), {
+    new Chart(chart, {
         type: "line",
         data: {
             labels,
             datasets: [
-                { label: "Kotel", data: kotel, borderColor: "#f97316", tension: 0.3 },
-                { label: "Bojler", data: bojler, borderColor: "#38bdf8", tension: 0.3 },
-                { label: "Venku", data: venku, borderColor: "#22c55e", tension: 0.3 }
+                { label: "Kotel", data: feeds.map(f=>+f.field1), borderColor: "#f97316", tension:.3 },
+                { label: "Bojler", data: bojlerData, borderColor: "#38bdf8", tension:.3 },
+                { label: "Venku", data: feeds.map(f=>+f.field3), borderColor: "#22c55e", tension:.3 }
             ]
         },
         options: {
-            responsive: true,
-            plugins: {
-                legend: { labels: { color: "#e5e7eb" } }
-            },
+            plugins: { legend: { labels: { color: getComputedStyle(document.body).color } } },
             scales: {
-                x: { ticks: { color: "#94a3b8" } },
-                y: { ticks: { color: "#94a3b8" } }
+                x: { ticks: { color: getComputedStyle(document.body).color } },
+                y: { ticks: { color: getComputedStyle(document.body).color } }
             }
         }
     });
@@ -206,3 +263,4 @@ fetch(URL)
 
 </body>
 </html>
+
