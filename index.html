@@ -2,193 +2,181 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<title>Attack FD25 – Profi panel vytápění</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="https://cdn.jsdelivr.net/…pt>
+<title>Panel kotelny</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {
-  font-family: Arial, sans-serif;
-  background:#0f172a;
-  color:#e5e7eb;
-  margin:0;
-  padding:20px;
+    margin: 0;
+    font-family: "Segoe UI", sans-serif;
+    background: #0f172a;
+    color: #e5e7eb;
 }
-h1 { margin-bottom:5px; }
-.small { opacity:0.7; font-size:0.9rem; }
-
-.section-title {
-  margin-top:30px;
-  margin-bottom:10px;
-  font-size:1.2rem;
+header {
+    background: #020617;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #1e293b;
 }
-
-.grid {
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:16px;
+h1 {
+    margin: 0;
+    font-size: 22px;
+}
+.time {
+    text-align: right;
+    font-size: 14px;
+    color: #94a3b8;
+}
+.container {
+    padding: 25px;
+}
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+    gap: 20px;
 }
 .card {
-  background:#020617;
-  border-radius:16px;
-  padding:16px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.4);
+    background: #020617;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 0 25px rgba(0,0,0,0.4);
+}
+.card h2 {
+    margin: 0;
+    font-size: 15px;
+    color: #94a3b8;
 }
 .value {
-  font-size:2.1rem;
-  font-weight:bold;
+    font-size: 36px;
+    margin-top: 10px;
 }
-.unit { opacity:0.7; }
-
-canvas { margin-top:10px; }
+.unit {
+    font-size: 16px;
+    color: #94a3b8;
+}
+canvas {
+    background: #020617;
+    border-radius: 12px;
+    padding: 15px;
+}
+.footer {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #64748b;
+    text-align: right;
+}
 </style>
 </head>
 
 <body>
 
-<h1>🔥 Attack FD25 – Rodinný dům</h1>
-<div class="small">
-  Automatický kotel FD25 · bojler 125 l Dražice<br>
-  ⏱️ Poslední aktualizace: <span id="lastUpdate">–</span>
+<header>
+    <h1>🔥 Panel kotelny</h1>
+    <div class="time">
+        <div id="now"></div>
+        <div>Poslední aktualizace: <span id="lastUpdate">–</span></div>
+    </div>
+</header>
+
+<div class="container">
+
+<div class="cards">
+    <div class="card">
+        <h2>Teplota na kotli</h2>
+        <div class="value"><span id="kotel">–</span><span class="unit"> °C</span></div>
+    </div>
+
+    <div class="card">
+        <h2>Teplota bojler</h2>
+        <div class="value"><span id="bojler">–</span><span class="unit"> °C</span></div>
+    </div>
+
+    <div class="card">
+        <h2>Teplota venku</h2>
+        <div class="value"><span id="venku">–</span><span class="unit"> °C</span></div>
+    </div>
+
+    <div class="card">
+        <h2>Spotřeba ohřevu bojleru (24h)</h2>
+        <div class="value"><span id="energie">–</span><span class="unit"> kWh</span></div>
+    </div>
 </div>
 
-<!-- TEPLOTY -->
-<div class="section-title">🌡️ Teploty</div>
-<div class="grid">
-  <div class="card"><div>Kotel</div><div class="value" id="f5">–</div><div class="unit">°C</div></div>
-  <div class="card"><div>Výstup z kotle</div><div class="value" id="f2">–</div><div class="unit">°C</div></div>
-  <div class="card"><div>Zpátečka</div><div class="value" id="f1">–</div><div class="unit">°C</div></div>
-  <div class="card"><div>ΔT</div><div class="value" id="deltaT">–</div><div class="unit">°C</div></div>
-  <div class="card"><div>TUV</div><div class="value" id="f3">–</div><div class="unit">°C</div></div>
-  <div class="card"><div>Venkovní</div><div class="value" id="f4">–</div><div class="unit">°C</div></div>
+<br>
+
+<canvas id="chart" height="120"></canvas>
+
+<div class="footer">
+    Data: ThingSpeak ID 1957585
 </div>
 
-<!-- ENERGIE -->
-<div class="section-title">🚿 Spotřeba TUV</div>
-<div class="grid">
-  <div class="card">
-    <div>Denní energie TUV</div>
-    <div class="value" id="energyDay">–</div>
-    <div class="unit">kWh</div>
-  </div>
-
-  <div class="card">
-    <div>Denní uhlí (Bílina)</div>
-    <div class="value" id="coalDay">–</div>
-    <div class="unit">kg</div>
-  </div>
-
-  <div class="card">
-    <div>Měsíční energie TUV<br><span class="small">(od 1. dne)</span></div>
-    <div class="value" id="energyMonth">–</div>
-    <div class="unit">kWh</div>
-  </div>
-
-  <div class="card">
-    <div>Měsíční uhlí (Bílina)</div>
-    <div class="value" id="coalMonth">–</div>
-    <div class="unit">kg</div>
-  </div>
-</div>
-
-<!-- GRAF -->
-<div class="section-title">📈 Teploty – posledních 24 h</div>
-<div class="card">
-  <canvas id="chart"></canvas>
 </div>
 
 <script>
-const CHANNEL_ID = 231269;
-const BOILER_VOLUME = 125;
-const COAL_KG_PER_KWH = 0.27;
-const RESULTS_24H = 96;
+const CHANNEL = 1957585;
+const URL = `https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?results=288`;
 
-let chart;
+const BOJLER_OBJEM_L = 120; // změň dle skutečnosti
+const C = 4.186; // kJ/kg·K
 
-function r1(v){ return (!isNaN(v) && v!==null) ? Number(v).toFixed(1) : '–'; }
-
-async function loadData(){
-
-  /* ==== 24 h data ==== */
-  const r24 = await fetch(`https://api.thingspeak.com/…4H}`);
-  const d24 = await r24.json();
-  const f24 = d24.feeds;
-  const last = f24.at(-1);
-
-  document.getElementById('lastUpdate').textContent =
-    new Date(last.created_at).toLocaleString('cs-CZ');
-
-  ['1','2','3','4','5'].forEach(i=>{
-    document.getElementById('f'+i).textContent = r1(last['field'+i]);
-  });
-
-  document.getElementById('deltaT').textContent =
-    r1(last.field2 - last.field1);
-
-  /* ==== CELÁ HISTORIE (pro měsíc) ==== */
-  const rall = await fetch(`https://api.thingspeak.com/…000`);
-  const all = (await rall.json()).feeds;
-
-  const now = new Date();
-  const startDay = new Date(now); startDay.setHours(0,0,0,0);
-  const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  let eDay = 0, eMonth = 0;
-
-  for(let i=1;i<all.length;i++){
-    const p = all[i-1];
-    const c = all[i];
-    const t = new Date(c.created_at);
-    const dT = c.field3 - p.field3;
-
-    if(dT > 0){
-      const e = BOILER_VOLUME * dT * 0.001163;
-      if(t >= startDay)   eDay   += e;
-      if(t >= startMonth) eMonth += e;
-    }
-  }
-
-  document.getElementById('energyDay').textContent = r1(eDay);
-  document.getElementById('coalDay').textContent   = r1(eDay * COAL_KG_PER_KWH);
-  document.getElementById('energyMonth').textContent = r1(eMonth);
-  document.getElementById('coalMonth').textContent   = r1(eMonth * COAL_KG_PER_KWH);
-
-  /* ==== GRAF ==== */
-  const labels = f24.map(f =>
-    new Date(f.created_at).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'})
-  );
-
-  const cfg = [
-    ['Kotel','field5'],
-    ['Výstup','field2'],
-    ['Zpátečka','field1'],
-    ['TUV','field3'],
-    ['Venkovní','field4']
-  ];
-
-  const datasets = cfg.map(c=>({
-    label:c[0],
-    data:f24.map(f=>f[c[1]]),
-    borderWidth:2,
-    tension:0.3
-  }));
-
-  if(chart) chart.destroy();
-  chart = new Chart(document.getElementById('chart'),{
-    type:'line',
-    data:{labels,datasets},
-    options:{
-      plugins:{legend:{labels:{color:'#e5e7eb'}}},
-      scales:{
-        x:{ticks:{color:'#94a3b8'}},
-        y:{ticks:{color:'#94a3b8'}}
-      }
-    }
-  });
+function updateTime() {
+    document.getElementById("now").innerText =
+        new Date().toLocaleString("cs-CZ");
 }
+setInterval(updateTime, 1000);
+updateTime();
 
-loadData();
-setInterval(loadData,60000);
+fetch(URL)
+.then(r => r.json())
+.then(data => {
+    const feeds = data.feeds;
+
+    const last = feeds[feeds.length - 1];
+    document.getElementById("kotel").innerText = Number(last.field1).toFixed(1);
+    document.getElementById("bojler").innerText = Number(last.field2).toFixed(1);
+    document.getElementById("venku").innerText = Number(last.field3).toFixed(1);
+    document.getElementById("lastUpdate").innerText =
+        new Date(last.created_at).toLocaleString("cs-CZ");
+
+    // 24h data
+    const labels = feeds.map(f => new Date(f.created_at).toLocaleTimeString("cs-CZ"));
+    const kotel = feeds.map(f => Number(f.field1));
+    const bojler = feeds.map(f => Number(f.field2));
+    const venku = feeds.map(f => Number(f.field3));
+
+    // Výpočet energie
+    const T1 = bojler[0];
+    const T2 = bojler[bojler.length - 1];
+    const dT = Math.max(T2 - T1, 0);
+    const energie = (BOJLER_OBJEM_L * C * dT) / 3600;
+    document.getElementById("energie").innerText = energie.toFixed(2);
+
+    new Chart(document.getElementById("chart"), {
+        type: "line",
+        data: {
+            labels,
+            datasets: [
+                { label: "Kotel", data: kotel, borderColor: "#f97316", tension: 0.3 },
+                { label: "Bojler", data: bojler, borderColor: "#38bdf8", tension: 0.3 },
+                { label: "Venku", data: venku, borderColor: "#22c55e", tension: 0.3 }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { labels: { color: "#e5e7eb" } }
+            },
+            scales: {
+                x: { ticks: { color: "#94a3b8" } },
+                y: { ticks: { color: "#94a3b8" } }
+            }
+        }
+    });
+});
 </script>
 
 </body>
