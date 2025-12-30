@@ -1,221 +1,373 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="cs">
 <head>
-<meta charset="UTF-8">
-<title>Kotelna – Profi panel</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-body {
-    font-family: Arial, sans-serif;
-    background:#f4f6f8;
-    margin:0;
-}
-header {
-    background:#1f2937;
-    color:white;
-    padding:15px;
-    text-align:center;
-}
-.container {
-    padding:20px;
-    max-width:1200px;
-    margin:auto;
-}
-.grid {
-    display:grid;
-    grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
-    gap:15px;
-}
-.card {
-    background:white;
-    padding:15px;
-    border-radius:8px;
-    box-shadow:0 2px 5px rgba(0,0,0,0.1);
-}
-.card h3 {
-    margin-top:0;
-    font-size:16px;
-    color:#374151;
-}
-.value {
-    font-size:26px;
-    font-weight:bold;
-}
-.settings input {
-    width:100%;
-    padding:6px;
-    margin-top:5px;
-}
-footer {
-    text-align:center;
-    margin-top:20px;
-    color:#555;
-}
-canvas {
-    background:white;
-    border-radius:8px;
-    padding:10px;
-}
-</style>
+  <meta charset="utf-8"/>
+  <title>Profi Panel Kotelny - Attack FD 25</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      margin: 0; padding: 0; 
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      color: #333; 
+      min-height: 100vh;
+    }
+    header { 
+      background: rgba(0,0,0,0.9); 
+      color: white; 
+      padding: 15px 20px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .datetime { font-size: 18px; font-weight: 500; }
+    .last-update { font-size: 14px; opacity: 0.9; }
+    main { padding: 20px; max-width: 1400px; margin: 0 auto; }
+    
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 25px; }
+    .card { 
+      background: rgba(255,255,255,0.95); 
+      border-radius: 15px; 
+      padding: 20px; 
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      backdrop-filter: blur(10px);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 15px 40px rgba(0,0,0,0.2); }
+    
+    h2 { 
+      font-size: 16px; 
+      margin: 0 0 15px 0; 
+      color: #1e3c72; 
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .value { 
+      font-size: 36px; 
+      font-weight: 700; 
+      color: #d32f2f;
+      margin-bottom: 5px;
+    }
+    .sub { color: #666; font-size: 13px; margin-top: 5px; }
+    .unit { font-size: 18px; color: #1e3c72; font-weight: 500; }
+    
+    #chartContainer { 
+      height: 350px; 
+      background: rgba(255,255,255,0.8); 
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+    .setting { 
+      background: rgba(30,60,114,0.1); 
+      padding: 15px; 
+      border-radius: 10px;
+      border: 2px solid rgba(30,60,114,0.2);
+    }
+    .setting label { 
+      display: block; 
+      font-weight: 500; 
+      margin-bottom: 8px; 
+      color: #1e3c72;
+    }
+    input[type="number"] { 
+      width: 100%; 
+      padding: 12px; 
+      border: 2px solid rgba(30,60,114,0.3);
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+    input:focus { outline: none; border-color: #1e3c72; box-shadow: 0 0 0 3px rgba(30,60,114,0.1); }
+    
+    .status-good { color: #4caf50; }
+    .status-warn { color: #ff9800; }
+    .status-bad { color: #f44336; }
+    
+    .power-card { grid-column: span 2; }
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+      .power-card { grid-column: span 1; }
+      .settings-grid { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
-
 <body>
-<header>
-    <h1>Kotelna – Attack FD 25 Automat</h1>
-    <div id="datetime"></div>
-    <div id="lastUpdate"></div>
-</header>
+  <header>
+    <div class="datetime" id="dateTime">Čtvrtek, 30. prosince 2025 08:10</div>
+    <div class="last-update" id="lastUpdate">Poslední aktualizace: Načítám...</div>
+  </header>
 
-<div class="container">
+  <main>
+    <div class="grid">
+      <!-- Kotel -->
+      <div class="card">
+        <h2>🔥 Na kotli</h2>
+        <div class="value" id="field5">-- °C</div>
+        <div class="sub">Aktuální teplota kotle Attack FD 25</div>
+      </div>
+      
+      <!-- Podavač -->
+      <div class="card">
+        <h2>⚙️ Teplota podavače</h2>
+        <div class="value" id="field2">-- °C</div>
+        <div class="sub">Teplota šneku podavače</div>
+      </div>
+      
+      <!-- Bojler -->
+      <div class="card">
+        <h2>💧 Bojler</h2>
+        <div class="value" id="field3">-- °C</div>
+        <div class="sub">Teplota zásobníku TUV</div>
+      </div>
+      
+      <!-- Zpátečka -->
+      <div class="card">
+        <h2>↩️ Zpátečka</h2>
+        <div class="value" id="field1">-- °C</div>
+        <div class="sub">Vratná teplota</div>
+      </div>
+      
+      <!-- Venku -->
+      <div class="card">
+        <h2>🌡️ Venkovní teplota</h2>
+        <div class="value" id="field4">-- °C</div>
+        <div class="sub">Aktuální venkovní teplota</div>
+      </div>
+      
+      <!-- Celkový čas -->
+      <div class="card">
+        <h2>⏱️ Celkový čas podavače</h2>
+        <div class="value" id="field8">-- h</div>
+        <div class="sub">Celková doba provozu podavače</div>
+      </div>
+    </div>
 
-<!-- TEPLOTY -->
-<div class="grid">
-    <div class="card"><h3>Teplota kotle</h3><div class="value" id="t_kotel">-- °C</div></div>
-    <div class="card"><h3>TUV (bojler)</h3><div class="value" id="t_bojler">-- °C</div></div>
-    <div class="card"><h3>Venkovní</h3><div class="value" id="t_venku">-- °C</div></div>
-    <div class="card"><h3>Zpátečka</h3><div class="value" id="t_zpatecka">-- °C</div></div>
-    <div class="card"><h3>Podavač</h3><div class="value" id="t_podavac">-- °C</div></div>
-    <div class="card"><h3>Aktuální výkon</h3><div class="value" id="vykon">-- kW</div></div>
-</div>
+    <!-- Graf 24h -->
+    <div class="card">
+      <h2>📈 Podávací rychlost - posledních 24h</h2>
+      <div id="chartContainer">
+        <canvas id="powerChart"></canvas>
+      </div>
+    </div>
 
-<br>
+    <div class="grid">
+      <!-- Náklady a spotřeba -->
+      <div class="card power-card">
+        <h2>💰 Náklady a spotřeba</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin-bottom: 20px;">
+          <div>
+            <div class="sub">24h spotřeba</div>
+            <div class="value" id="cons24h">-- kg</div>
+          </div>
+          <div>
+            <div class="sub">Měsíc</div>
+            <div class="value" id="consMonth">-- kg</div>
+          </div>
+          <div>
+            <div class="sub">Náklady/den</div>
+            <div class="value" id="costDay">-- Kč</div>
+          </div>
+          <div>
+            <div class="sub">Náklady/měsíc</div>
+            <div class="value" id="costMonth">-- Kč</div>
+          </div>
+        </div>
+        
+        <div class="settings-grid">
+          <div class="setting">
+            <label>Cena uhlí za kg</label>
+            <input type="number" id="pricePerKg" value="15.50" step="0.01" min="0" /> Kč
+          </div>
+          <div class="setting">
+            <label>Rychlost podavače (10min)</label>
+            <input type="number" id="feedRate10min" value="2.5" step="0.1" min="0" /> kg
+          </div>
+        </div>
+      </div>
 
-<!-- SPOTŘEBA -->
-<div class="grid">
-    <div class="card settings">
-        <h3>Nastavení</h3>
-        Kg uhlí / 10 min:
-        <input type="number" id="kg10" value="1.5" step="0.1">
-        Cena uhlí (Kč/kg):
-        <input type="number" id="cena" value="6" step="0.1">
+      <!-- Aktuální výkon -->
+      <div class="card power-card">
+        <h2>⚡ Aktuální výkon kotle</h2>
+        <div class="value" id="currentPower">-- kW</div>
+        <div class="sub" id="powerStatus">Attack FD 25 automat - výpočet z teplot</div>
+      </div>
     </div>
 
     <div class="card">
-        <h3>Spotřeba</h3>
-        <b id="spotDen">-- kg / den</b><br>
-        <b id="spotMes">-- kg / měsíc</b>
+      <h2>🔗 ThingSpeak stav</h2>
+      <div id="thingspeakStatus" style="padding: 15px; background: rgba(30,60,114,0.05); border-radius: 8px;">
+        Channel ID: <strong>231269</strong> - Načítám data...
+      </div>
     </div>
+  </main>
 
-    <div class="card">
-        <h3>Náklady</h3>
-        Den: <b id="nakDen">-- Kč</b><br>
-        Měsíc: <b id="nakMes">-- Kč</b><br>
-        Rok: <b id="nakRok">-- Kč</b>
-    </div>
-</div>
+  <script>
+    // KONFIGURACE - ZDE VLOŽTE SVŮJ READ API KEY Z THINGSPEAK
+    const CONFIG = {
+      channelId: 231269,
+      readApiKey: "YOUR_READ_API_KEY_HERE", // Získejte na thingspeak.com/channels/231269
+      updateInterval: 30000 // 30 sekund
+    };
 
-<br>
+    let chart;
+    const ctx = document.getElementById('powerChart').getContext('2d');
 
-<!-- GRAF -->
-<div class="card">
-    <h3>Graf teplot – posledních 24 h</h3>
-    <canvas id="chart24"></canvas>
-</div>
-
-</div>
-
-<footer>
-    Data: ThingSpeak | Profi kotelnový panel
-</footer>
-
-<script>
-const CHANNEL = 231269;
-const API = `https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?results=288`;
-
-function updateTime() {
-    document.getElementById("datetime").innerText =
-        new Date().toLocaleString("cs-CZ");
-}
-setInterval(updateTime,1000);
-updateTime();
-
-function fmt(val){
-    return val !== null && val !== "" ? parseFloat(val).toFixed(1) : "--";
-}
-
-async function loadData() {
-    const r = await fetch(API);
-    const d = await r.json();
-    const f = d.feeds;
-    const last = f[f.length-1];
-
-    document.getElementById("lastUpdate").innerText =
-        "Poslední aktualizace: " + new Date(last.created_at).toLocaleString("cs-CZ");
-
-    document.getElementById("t_kotel").innerText = fmt(last.field5)+" °C";
-    document.getElementById("t_bojler").innerText = fmt(last.field3)+" °C";
-    document.getElementById("t_venku").innerText = fmt(last.field4)+" °C";
-    document.getElementById("t_zpatecka").innerText = fmt(last.field1)+" °C";
-    document.getElementById("t_podavac").innerText = fmt(last.field2)+" °C";
-
-    // SPOTŘEBA – field 8 v sekundách
-    const feederNowSec = parseFloat(last.field8 || 0);
-    const feederStartSec = parseFloat(f[0].field8 || 0);
-    const diffMin = (feederNowSec - feederStartSec) / 60;
-
-    const kg10 = parseFloat(document.getElementById("kg10").value);
-    const kgPerMin = kg10 / 10;
-    const spotKg = diffMin * kgPerMin;
-
-    const startTime = new Date(f[0].created_at);
-    const nowTime = new Date(last.created_at);
-    const hoursMeasured = (nowTime - startTime) / 3600000;
-
-    let spotDen = 0;
-    if (hoursMeasured >= 1) {
-        spotDen = (spotKg / hoursMeasured) * 24;
-        document.getElementById("spotDen").innerText = spotDen.toFixed(1)+" kg / den";
-        document.getElementById("spotMes").innerText = (spotDen*30).toFixed(0)+" kg / měsíc";
-    } else {
-        document.getElementById("spotDen").innerText = spotKg.toFixed(2)+" kg (zatím)";
-        document.getElementById("spotMes").innerText = "–";
+    // Inicializace grafu
+    function initChart() {
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Podávací rychlost (kg/h)',
+            data: [],
+            borderColor: '#d32f2f',
+            backgroundColor: 'rgba(211, 47, 47, 0.1)',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }
+          }
+        }
+      });
     }
 
-    // NÁKLADY
-    const cena = parseFloat(document.getElementById("cena").value);
-    document.getElementById("nakDen").innerText = (spotDen*cena).toFixed(0);
-    document.getElementById("nakMes").innerText = (spotDen*30*cena).toFixed(0);
-    document.getElementById("nakRok").innerText = (spotDen*365*cena).toFixed(0);
+    // Formátování času
+    function formatDateTime(timestamp) {
+      return new Date(timestamp).toLocaleString('cs-CZ', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
 
-    // VÝKON – poslední hodina
-    const lastHour = f.slice(-12);
-    const runSec = lastHour[lastHour.length-1].field8 - lastHour[0].field8;
-    const runMin = runSec / 60;
-    const power = Math.min(25, (runMin / 60) * 25);
-    document.getElementById("vykon").innerText = power.toFixed(1)+" kW";
-
-    drawChart(f);
-}
-
-let chart;
-function drawChart(f){
-    const labels = f.map(x => new Date(x.created_at).toLocaleTimeString("cs-CZ"));
-    const kotel = f.map(x => x.field5);
-    const zpatecka = f.map(x => x.field1);
-    const tuv = f.map(x => x.field3);
-
-    if(chart) chart.destroy();
-    chart = new Chart(document.getElementById("chart24"),{
-        type:"line",
-        data:{
-            labels,
-            datasets:[
-                { label:"Kotel", data:kotel, borderColor:"red", tension:0.3 },
-                { label:"Zpátečka", data:zpatecka, borderColor:"blue", tension:0.3 },
-                { label:"TUV", data:tuv, borderColor:"green", tension:0.3 }
-            ]
-        },
-        options:{
-            scales:{
-                y:{ title:{ display:true, text:"°C" } }
-            }
+    // Načtení aktuálních dat
+    async function fetchCurrentData() {
+      try {
+        const url = `https://api.thingspeak.com/channels/${CONFIG.channelId}/feeds.json?results=1&api_key=${CONFIG.readApiKey}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.feeds && data.feeds.length > 0) {
+          const feed = data.feeds[0];
+          updateDisplay(feed);
+          document.getElementById('lastUpdate').textContent = `Poslední aktualizace: ${formatDateTime(feed.created_at)}`;
+          document.getElementById('thingspeakStatus').innerHTML = 
+            `Channel ID: <strong>${CONFIG.channelId}</strong><br>` +
+            `Poslední záznam: ${formatDateTime(feed.created_at)}<br>` +
+            `Stav: <span class="status-good">✅ OK</span>`;
         }
-    });
-}
+      } catch (error) {
+        console.error('Chyba načítání:', error);
+        document.getElementById('thingspeakStatus').innerHTML = 
+          `Chyba připojení k ThingSpeak<br>` +
+          `<span class="status-bad">❌ Zkontrolujte API klíč</span>`;
+      }
+    }
 
-loadData();
-setInterval(loadData,60000);
-</script>
+    // Načtení 24h dat pro graf
+    async function fetch24hData() {
+      try {
+        const url = `https://api.thingspeak.com/channels/${CONFIG.channelId}/feeds.json?days=1&average=10&api_key=${CONFIG.readApiKey}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.feeds && data.feeds.length > 0) {
+          const labels = data.feeds.map(f => formatDateTime(f.created_at).split(', ')[1]);
+          const values = data.feeds.map(f => (parseFloat(f.field2) || 0) * 0.1); // Příklad výpočtu
+          
+          chart.data.labels = labels;
+          chart.data.datasets[0].data = values;
+          chart.update('none');
+        }
+      } catch (error) {
+        console.error('Chyba grafu:', error);
+      }
+    }
 
+    // Aktualizace zobrazení
+    function updateDisplay(feed) {
+      // Teploty
+      document.getElementById('field1').querySelector('.value').textContent = (parseFloat(feed.field1) || 0).toFixed(1) + ' °C';
+      document.getElementById('field2').querySelector('.value').textContent = (parseFloat(feed.field2) || 0).toFixed(1) + ' °C';
+      document.getElementById('field3').querySelector('.value').textContent = (parseFloat(feed.field3) || 0).toFixed(1) + ' °C';
+      document.getElementById('field4').querySelector('.value').textContent = (parseFloat(feed.field4) || 0).toFixed(1) + ' °C';
+      document.getElementById('field5').querySelector('.value').textContent = (parseFloat(feed.field5) || 0).toFixed(1) + ' °C';
+      document.getElementById('field8').querySelector('.value').textContent = (parseFloat(feed.field8) || 0).toFixed(0) + ' h';
+
+      // Výpočty
+      updateCalculations();
+    }
+
+    // Výpočty nákladů
+    function updateCalculations() {
+      const pricePerKg = parseFloat(document.getElementById('pricePerKg').value) || 0;
+      const feedRate = parseFloat(document.getElementById('feedRate10min').value) || 0;
+      
+      // Spotřeba
+      const cons24h = (feedRate * 144); // 24h * 6 (10min intervaly)
+      const consMonth = cons24h * 30;
+      
+      // Náklady
+      const costDay = cons24h * pricePerKg;
+      const costMonth = consMonth * pricePerKg;
+      
+      document.getElementById('cons24h').textContent = cons24h.toFixed(1) + ' kg';
+      document.getElementById('consMonth').textContent = consMonth.toFixed(0) + ' kg';
+      document.getElementById('costDay').textContent = costDay.toFixed(0) + ' Kč';
+      document.getElementById('costMonth').textContent = costMonth.toFixed(0) + ' Kč';
+      
+      // Výkon kotle (odhad)
+      const boilerTemp = parseFloat(document.getElementById('field5').querySelector('.value').textContent) || 0;
+      const power = Math.min((boilerTemp - 40) * 0.8, 25).toFixed(1);
+      document.getElementById('currentPower').textContent = power + ' kW';
+    }
+
+    // Aktualizace času
+    function updateClock() {
+      document.getElementById('dateTime').textContent = new Date().toLocaleDateString('cs-CZ', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Event listenry
+    document.getElementById('pricePerKg').addEventListener('input', updateCalculations);
+    document.getElementById('feedRate10min').addEventListener('input', updateCalculations);
+
+    // Inicializace
+    initChart();
+    updateClock();
+    fetchCurrentData();
+    fetch24hData();
+
+    // Automatické aktualizace
+    setInterval(updateClock, 1000);
+    setInterval(() => {
+      fetchCurrentData();
+      fetch24hData();
+    }, CONFIG.updateInterval);
+  </script>
 </body>
 </html>
