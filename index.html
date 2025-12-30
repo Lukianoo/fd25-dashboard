@@ -5,8 +5,6 @@
 <title>Kotelna – Attack FD 25</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
 *{box-sizing:border-box}
 body{
@@ -21,52 +19,27 @@ header{
   padding:15px 20px;
   display:flex;
   justify-content:space-between;
-  align-items:center;
 }
 main{max-width:1400px;margin:auto;padding:20px}
-
 .grid{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
   gap:20px;
 }
-
 .card{
   background:#fff;
   border-radius:14px;
   padding:20px;
   box-shadow:0 10px 30px rgba(0,0,0,.25);
 }
-
-h2{
-  margin:0 0 12px;
-  font-size:16px;
-  color:#1e3c72;
-}
-
-.value{
-  font-size:34px;
-  font-weight:700;
-  color:#d32f2f;
-}
-.sub{
-  font-size:13px;
-  color:#555;
-}
+h2{margin:0 0 10px;font-size:16px;color:#1e3c72}
+.value{font-size:32px;font-weight:700;color:#d32f2f}
+.sub{font-size:13px;color:#555}
 .green{color:#2e7d32}
 .blue{color:#1565c0}
-
-.settings{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:15px;
-}
-
-input{
-  width:100%;
-  padding:10px;
-  font-size:15px;
-}
+.orange{color:#ef6c00}
+input{width:100%;padding:10px;font-size:15px}
+.settings{display:grid;grid-template-columns:1fr 1fr;gap:15px}
 </style>
 </head>
 
@@ -79,50 +52,63 @@ input{
 
 <main>
 
-<!-- ====== TEPLOTY ====== -->
+<!-- TEPLOTY -->
 <div class="grid">
   <div class="card"><h2>🔥 Kotel</h2><div class="value" id="tKotel">--</div></div>
   <div class="card"><h2>⚙️ Podavač</h2><div class="value" id="tPodavac">--</div></div>
   <div class="card"><h2>💧 Bojler</h2><div class="value" id="tBojler">--</div></div>
   <div class="card"><h2>↩️ Zpátečka</h2><div class="value" id="tZpet">--</div></div>
   <div class="card"><h2>🌡️ Venku</h2><div class="value" id="tVenku">--</div></div>
-  <div class="card"><h2>⏱️ Podavač – čas</h2><div class="value" id="feedTime">--</div></div>
+  <div class="card"><h2>⏱️ Podavač – celkem</h2><div class="value" id="feedTotal">--</div></div>
 </div>
 
 <br>
 
-<!-- ====== SPOTŘEBA ====== -->
+<!-- SPOTŘEBA -->
 <div class="card">
 <h2>💰 Spotřeba uhlí</h2>
+
 <div class="grid">
-  <div><div class="sub">AKTUÁLNĚ</div><div class="value green" id="consCurrent">0 kg</div></div>
-  <div><div class="sub">DNES</div><div class="value green" id="consToday">0 kg</div></div>
-  <div><div class="sub">MĚSÍC</div><div class="value blue" id="consMonth">0 kg</div></div>
-  <div><div class="sub">NÁKLADY DNES</div><div class="value" id="costToday">0 Kč</div></div>
+  <div>
+    <div class="sub">HODINA</div>
+    <div class="value orange" id="kgHour">0 kg</div>
+    <div class="sub" id="powerKW">0 kW</div>
+  </div>
+
+  <div>
+    <div class="sub">DNES</div>
+    <div class="value green" id="kgDay">0 kg</div>
+  </div>
+
+  <div>
+    <div class="sub">MĚSÍC</div>
+    <div class="value blue" id="kgMonth">0 kg</div>
+  </div>
+
+  <div>
+    <div class="sub">CENA DNES</div>
+    <div class="value" id="costDay">0 Kč</div>
+  </div>
+
+  <div>
+    <div class="sub">CENA MĚSÍC</div>
+    <div class="value" id="costMonth">0 Kč</div>
+  </div>
 </div>
 </div>
 
 <br>
 
-<!-- ====== VÝKON ====== -->
-<div class="card">
-<h2>⚡ Reálný výkon z paliva</h2>
-<div class="value" id="realPower">0 kW</div>
-<div class="sub">Výpočet z kg/h (výhřevnost 4.8 kWh/kg, účinnost 75 %)</div>
-</div>
-
-<br>
-
-<!-- ====== NASTAVENÍ ====== -->
+<!-- NASTAVENÍ -->
 <div class="card">
 <h2>⚙️ Nastavení</h2>
 <div class="settings">
   <div>
-    <label>Kg uhlí za 10 min</label>
+    <label>Kg uhlí / 10 min</label>
     <input type="number" id="kg10min" value="2.5" step="0.1">
   </div>
   <div>
-    <label>Cena za kg</label>
+    <label>Cena / kg</label>
     <input type="number" id="priceKg" value="15.5" step="0.1">
   </div>
 </div>
@@ -131,95 +117,80 @@ input{
 </main>
 
 <script>
-/* ====== KONSTANTY ====== */
 const CHANNEL = 231269;
-const ENERGY_KWH_KG = 4.8;
-const EFFICIENCY = 0.75;
+const ENERGY = 4.8;
+const EFF = 0.75;
 
-/* ====== CLOCK ====== */
 function updateClock(){
   clock.textContent = new Date().toLocaleString("cs-CZ");
 }
 
-/* ====== HELPERY ====== */
-function secondsToKg(sec){
-  return (sec / 600) * (parseFloat(kg10min.value) || 2.5);
+function secToKg(sec){
+  return (sec/600)*(+kg10min.value||2.5);
 }
 
-function todayKey(){
+function dayKey(){
   return new Date().toISOString().slice(0,10);
 }
 
-/* ====== RESET DNES ====== */
-function checkDailyReset(currentSec){
-  if(localStorage.day !== todayKey()){
-    localStorage.day = todayKey();
-    localStorage.baseSec = currentSec;
+function resetDaily(sec){
+  if(localStorage.day!==dayKey()){
+    localStorage.day=dayKey();
+    localStorage.baseDay=sec;
   }
-  if(!localStorage.baseSec){
-    localStorage.baseSec = currentSec;
-  }
-  return currentSec - localStorage.baseSec;
+  if(!localStorage.baseDay) localStorage.baseDay=sec;
+  return sec-localStorage.baseDay;
 }
 
-/* ====== FETCH ====== */
-async function fetchFeeds(params){
-  const r = await fetch(
-    `https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${params}`
-  );
-  return (await r.json()).feeds || [];
+async function fetchFeeds(p){
+  const r=await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${p}`);
+  return (await r.json()).feeds||[];
 }
 
-/* ====== UPDATE ====== */
 async function update(){
-  const cur = await fetchFeeds("results=1");
+  const cur=await fetchFeeds("results=1");
   if(!cur.length) return;
+  const f=cur[0];
 
-  const f = cur[0];
+  tKotel.textContent=(+f.field5||0).toFixed(1)+" °C";
+  tPodavac.textContent=(+f.field2||0).toFixed(1)+" °C";
+  tBojler.textContent=(+f.field3||0).toFixed(1)+" °C";
+  tZpet.textContent=(+f.field1||0).toFixed(1)+" °C";
+  tVenku.textContent=(+f.field4||0).toFixed(1)+" °C";
 
-  // teploty
-  tKotel.textContent   = (+f.field5 || 0).toFixed(1)+" °C";
-  tPodavac.textContent = (+f.field2 || 0).toFixed(1)+" °C";
-  tBojler.textContent  = (+f.field3 || 0).toFixed(1)+" °C";
-  tZpet.textContent    = (+f.field1 || 0).toFixed(1)+" °C";
-  tVenku.textContent   = (+f.field4 || 0).toFixed(1)+" °C";
+  const totalSec=+f.field8||0;
+  feedTotal.textContent=totalSec+" s";
 
-  const totalSec = +f.field8 || 0;
-  feedTime.textContent = totalSec+" s";
-
-  // aktuálně
-  consCurrent.textContent =
-    secondsToKg(totalSec).toFixed(2)+" kg";
-
-  // dnes
-  const todaySec = checkDailyReset(totalSec);
-  const todayKg = secondsToKg(todaySec);
-  consToday.textContent = todayKg.toFixed(2)+" kg";
-  costToday.textContent =
-    (todayKg * (priceKg.value || 15.5)).toFixed(0)+" Kč";
-
-  // měsíc
-  const month = await fetchFeeds("days=30&results=8000");
-  if(month.length > 1){
-    const mSec = month.at(-1).field8 - month[0].field8;
-    consMonth.textContent =
-      secondsToKg(mSec).toFixed(0)+" kg";
+  // HODINA
+  const hourFeeds=await fetchFeeds("minutes=60&results=200");
+  if(hourFeeds.length>1){
+    const hSec=hourFeeds.at(-1).field8-hourFeeds[0].field8;
+    const hKg=secToKg(hSec);
+    kgHour.textContent=hKg.toFixed(2)+" kg";
+    powerKW.textContent=(hKg*ENERGY*EFF).toFixed(1)+" kW";
   }
 
-  // výkon z poslední hodiny (odhad)
-  const powerKgH = secondsToKg(todaySec) * (3600 / Math.max(todaySec,1));
-  const powerKW = powerKgH * ENERGY_KWH_KG * EFFICIENCY;
-  realPower.textContent = powerKW.toFixed(1)+" kW";
+  // DEN
+  const daySec=resetDaily(totalSec);
+  const dayKg=secToKg(daySec);
+  kgDay.textContent=dayKg.toFixed(2)+" kg";
+  costDay.textContent=(dayKg*(+priceKg.value||15.5)).toFixed(0)+" Kč";
+
+  // MĚSÍC
+  const m=await fetchFeeds("days=30&results=8000");
+  if(m.length>1){
+    const mKg=secToKg(m.at(-1).field8-m[0].field8);
+    kgMonth.textContent=mKg.toFixed(0)+" kg";
+    costMonth.textContent=(mKg*(+priceKg.value||15.5)).toFixed(0)+" Kč";
+  }
 }
 
-/* ====== START ====== */
 updateClock();
 update();
 setInterval(updateClock,1000);
 setInterval(update,30000);
-
-kg10min.oninput = update;
-priceKg.oninput = update;
+kg10min.oninput=update;
+priceKg.oninput=update;
 </script>
 
 </body>
