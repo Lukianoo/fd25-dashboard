@@ -38,7 +38,7 @@ header {
     color:#374151;
 }
 .value {
-    font-size:28px;
+    font-size:26px;
     font-weight:bold;
 }
 .settings input {
@@ -68,9 +68,10 @@ canvas {
 
 <div class="container">
 
+<!-- TEPLOTY -->
 <div class="grid">
     <div class="card"><h3>Teplota kotle</h3><div class="value" id="t_kotel">-- °C</div></div>
-    <div class="card"><h3>Bojler</h3><div class="value" id="t_bojler">-- °C</div></div>
+    <div class="card"><h3>TUV (bojler)</h3><div class="value" id="t_bojler">-- °C</div></div>
     <div class="card"><h3>Venkovní</h3><div class="value" id="t_venku">-- °C</div></div>
     <div class="card"><h3>Zpátečka</h3><div class="value" id="t_zpatecka">-- °C</div></div>
     <div class="card"><h3>Podavač</h3><div class="value" id="t_podavac">-- °C</div></div>
@@ -79,23 +80,20 @@ canvas {
 
 <br>
 
+<!-- SPOTŘEBA -->
 <div class="grid">
     <div class="card settings">
         <h3>Nastavení</h3>
-        kg uhlí / 10 min:
+        Kg uhlí / 10 min:
         <input type="number" id="kg10" value="1.5" step="0.1">
         Cena uhlí (Kč/kg):
         <input type="number" id="cena" value="6" step="0.1">
     </div>
 
     <div class="card">
-        <h3>Spotřeba 24h</h3>
-        <div class="value" id="spot24">-- kg</div>
-    </div>
-
-    <div class="card">
-        <h3>Spotřeba měsíc</h3>
-        <div class="value" id="spotMes">-- kg</div>
+        <h3>Spotřeba</h3>
+        <b id="spotDen">-- kg / den</b><br>
+        <b id="spotMes">-- kg / měsíc</b>
     </div>
 
     <div class="card">
@@ -107,91 +105,110 @@ canvas {
 </div>
 
 <br>
+
+<!-- GRAF -->
 <div class="card">
-    <h3>Graf teplot – posledních 24h</h3>
+    <h3>Graf teplot – posledních 24 h</h3>
     <canvas id="chart24"></canvas>
 </div>
 
 </div>
 
 <footer>
-    Data: ThingSpeak | Panel připraven pro GitHub Pages
+    Data: ThingSpeak | Profi kotelnový panel
 </footer>
 
 <script>
 const CHANNEL = 231269;
 const API = `https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?results=288`;
 
-function now() {
+function updateTime() {
     document.getElementById("datetime").innerText =
         new Date().toLocaleString("cs-CZ");
 }
-setInterval(now,1000);
-now();
+setInterval(updateTime,1000);
+updateTime();
+
+function fmt(val){
+    return val !== null && val !== "" ? parseFloat(val).toFixed(1) : "--";
+}
 
 async function loadData() {
     const r = await fetch(API);
     const d = await r.json();
     const f = d.feeds;
-
     const last = f[f.length-1];
+
     document.getElementById("lastUpdate").innerText =
         "Poslední aktualizace: " + new Date(last.created_at).toLocaleString("cs-CZ");
 
-    t("t_kotel", last.field5);
-    t("t_bojler", last.field3);
-    t("t_venku", last.field4);
-    t("t_zpatecka", last.field1);
-    t("t_podavac", last.field2);
+    document.getElementById("t_kotel").innerText = fmt(last.field5)+" °C";
+    document.getElementById("t_bojler").innerText = fmt(last.field3)+" °C";
+    document.getElementById("t_venku").innerText = fmt(last.field4)+" °C";
+    document.getElementById("t_zpatecka").innerText = fmt(last.field1)+" °C";
+    document.getElementById("t_podavac").innerText = fmt(last.field2)+" °C";
 
+    // SPOTŘEBA – field 8 v sekundách
     const feederNowSec = parseFloat(last.field8 || 0);
-const feeder24Sec = parseFloat(f[0].field8 || 0);
-
-const diffMin = (feederNowSec - feeder24Sec) / 60;
-
+    const feederStartSec = parseFloat(f[0].field8 || 0);
+    const diffMin = (feederNowSec - feederStartSec) / 60;
 
     const kg10 = parseFloat(document.getElementById("kg10").value);
     const kgPerMin = kg10 / 10;
-    const spot24 = diffMin * kgPerMin;
+    const spotKg = diffMin * kgPerMin;
 
-    document.getElementById("spot24").innerText = spot24.toFixed(1)+" kg";
-    document.getElementById("spotMes").innerText = (spot24*30).toFixed(0)+" kg";
+    const startTime = new Date(f[0].created_at);
+    const nowTime = new Date(last.created_at);
+    const hoursMeasured = (nowTime - startTime) / 3600000;
 
+    let spotDen = 0;
+    if (hoursMeasured >= 1) {
+        spotDen = (spotKg / hoursMeasured) * 24;
+        document.getElementById("spotDen").innerText = spotDen.toFixed(1)+" kg / den";
+        document.getElementById("spotMes").innerText = (spotDen*30).toFixed(0)+" kg / měsíc";
+    } else {
+        document.getElementById("spotDen").innerText = spotKg.toFixed(2)+" kg (zatím)";
+        document.getElementById("spotMes").innerText = "–";
+    }
+
+    // NÁKLADY
     const cena = parseFloat(document.getElementById("cena").value);
-    document.getElementById("nakDen").innerText = (spot24*cena).toFixed(0);
-    document.getElementById("nakMes").innerText = (spot24*30*cena).toFixed(0);
-    document.getElementById("nakRok").innerText = (spot24*365*cena).toFixed(0);
+    document.getElementById("nakDen").innerText = (spotDen*cena).toFixed(0);
+    document.getElementById("nakMes").innerText = (spotDen*30*cena).toFixed(0);
+    document.getElementById("nakRok").innerText = (spotDen*365*cena).toFixed(0);
 
-    // výkon kotle (odhad)
+    // VÝKON – poslední hodina
     const lastHour = f.slice(-12);
     const runSec = lastHour[lastHour.length-1].field8 - lastHour[0].field8;
-const runMin = runSec / 60;
-const power = Math.min(25, (runMin / 60) * 25);
-
+    const runMin = runSec / 60;
+    const power = Math.min(25, (runMin / 60) * 25);
     document.getElementById("vykon").innerText = power.toFixed(1)+" kW";
 
     drawChart(f);
 }
 
-function t(id,val){
-    document.getElementById(id).innerText = val ? val+" °C" : "--";
-}
-
 let chart;
 function drawChart(f){
-    const labels = f.map(x=>new Date(x.created_at).toLocaleTimeString("cs-CZ"));
-    const dataKotel = f.map(x=>x.field5);
+    const labels = f.map(x => new Date(x.created_at).toLocaleTimeString("cs-CZ"));
+    const kotel = f.map(x => x.field5);
+    const zpatecka = f.map(x => x.field1);
+    const tuv = f.map(x => x.field3);
+
     if(chart) chart.destroy();
     chart = new Chart(document.getElementById("chart24"),{
         type:"line",
         data:{
             labels,
-            datasets:[{
-                label:"Teplota kotle",
-                data:dataKotel,
-                borderColor:"red",
-                tension:0.3
-            }]
+            datasets:[
+                { label:"Kotel", data:kotel, borderColor:"red", tension:0.3 },
+                { label:"Zpátečka", data:zpatecka, borderColor:"blue", tension:0.3 },
+                { label:"TUV", data:tuv, borderColor:"green", tension:0.3 }
+            ]
+        },
+        options:{
+            scales:{
+                y:{ title:{ display:true, text:"°C" } }
+            }
         }
     });
 }
