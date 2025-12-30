@@ -33,13 +33,12 @@ main{max-width:1400px;margin:auto;padding:20px}
   box-shadow:0 10px 30px rgba(0,0,0,.25);
 }
 h2{margin:0 0 10px;font-size:16px;color:#1e3c72}
-.value{font-size:32px;font-weight:700;color:#d32f2f}
+.value{font-size:32px;font-weight:700}
 .sub{font-size:13px;color:#555}
+.red{color:#d32f2f}
 .green{color:#2e7d32}
 .blue{color:#1565c0}
 .orange{color:#ef6c00}
-input{width:100%;padding:10px;font-size:15px}
-.settings{display:grid;grid-template-columns:1fr 1fr;gap:15px}
 </style>
 </head>
 
@@ -52,12 +51,14 @@ input{width:100%;padding:10px;font-size:15px}
 
 <main>
 
-<!-- TEPLOTY -->
+<!-- TEPLOTY + VÝKON -->
 <div class="grid">
-  <div class="card"><h2>🔥 Kotel</h2><div class="value" id="tKotel">--</div></div>
+  <div class="card"><h2>🔥 Kotel</h2><div class="value red" id="tKotel">--</div></div>
+  <div class="card"><h2>↩️ Zpátečka</h2><div class="value blue" id="tZpet">--</div></div>
+  <div class="card"><h2>🌡️ Teplotní spád ΔT</h2><div class="value orange" id="deltaT">--</div></div>
+  <div class="card"><h2>⚡ Výkon</h2><div class="value green" id="powerKWbig">--</div></div>
   <div class="card"><h2>⚙️ Podavač</h2><div class="value" id="tPodavac">--</div></div>
   <div class="card"><h2>💧 Bojler</h2><div class="value" id="tBojler">--</div></div>
-  <div class="card"><h2>↩️ Zpátečka</h2><div class="value" id="tZpet">--</div></div>
   <div class="card"><h2>🌡️ Venku</h2><div class="value" id="tVenku">--</div></div>
   <div class="card"><h2>⏱️ Podavač – celkem</h2><div class="value" id="feedTotal">--</div></div>
 </div>
@@ -67,49 +68,26 @@ input{width:100%;padding:10px;font-size:15px}
 <!-- SPOTŘEBA -->
 <div class="card">
 <h2>💰 Spotřeba uhlí</h2>
-
 <div class="grid">
   <div>
     <div class="sub">HODINA</div>
     <div class="value orange" id="kgHour">0 kg</div>
-    <div class="sub" id="powerKW">0 kW</div>
   </div>
-
   <div>
     <div class="sub">DNES</div>
     <div class="value green" id="kgDay">0 kg</div>
   </div>
-
   <div>
     <div class="sub">MĚSÍC</div>
     <div class="value blue" id="kgMonth">0 kg</div>
   </div>
-
   <div>
     <div class="sub">CENA DNES</div>
     <div class="value" id="costDay">0 Kč</div>
   </div>
-
   <div>
     <div class="sub">CENA MĚSÍC</div>
     <div class="value" id="costMonth">0 Kč</div>
-  </div>
-</div>
-</div>
-
-<br>
-
-<!-- NASTAVENÍ -->
-<div class="card">
-<h2>⚙️ Nastavení</h2>
-<div class="settings">
-  <div>
-    <label>Kg uhlí / 10 min</label>
-    <input type="number" id="kg10min" value="2.5" step="0.1">
-  </div>
-  <div>
-    <label>Cena / kg</label>
-    <input type="number" id="priceKg" value="6.2" step="0.1">
   </div>
 </div>
 </div>
@@ -126,20 +104,11 @@ function updateClock(){
 }
 
 function secToKg(sec){
-  return (sec/600)*(+kg10min.value||2.5);
+  return (sec/600)*(+kg10min?.value||2.5);
 }
 
 function dayKey(){
   return new Date().toISOString().slice(0,10);
-}
-
-function resetDaily(sec){
-  if(localStorage.day!==dayKey()){
-    localStorage.day=dayKey();
-    localStorage.baseDay=sec;
-  }
-  if(!localStorage.baseDay) localStorage.baseDay=sec;
-  return sec-localStorage.baseDay;
 }
 
 async function fetchFeeds(p){
@@ -152,36 +121,29 @@ async function update(){
   if(!cur.length) return;
   const f=cur[0];
 
-  tKotel.textContent=(+f.field5||0).toFixed(1)+" °C";
+  const tK = +f.field5||0;
+  const tZ = +f.field1||0;
+
+  tKotel.textContent = tK.toFixed(1)+" °C";
+  tZpet.textContent  = tZ.toFixed(1)+" °C";
   tPodavac.textContent=(+f.field2||0).toFixed(1)+" °C";
   tBojler.textContent=(+f.field3||0).toFixed(1)+" °C";
-  tZpet.textContent=(+f.field1||0).toFixed(1)+" °C";
   tVenku.textContent=(+f.field4||0).toFixed(1)+" °C";
 
-  const totalSec=+f.field8||0;
-  feedTotal.textContent=totalSec+" s";
+  const dT = tK - tZ;
+  deltaT.textContent = dT.toFixed(1)+" °C";
 
-  // HODINA
+  const totalSec = +f.field8||0;
+  feedTotal.textContent = totalSec+" s";
+
+  // výkon z poslední hodiny (BEZE ZMĚNY)
   const hourFeeds=await fetchFeeds("minutes=60&results=200");
   if(hourFeeds.length>1){
-    const hSec=hourFeeds.at(-1).field8-hourFeeds[0].field8;
-    const hKg=secToKg(hSec);
-    kgHour.textContent=hKg.toFixed(2)+" kg";
-    powerKW.textContent=(hKg*ENERGY*EFF).toFixed(1)+" kW";
-  }
-
-  // DEN
-  const daySec=resetDaily(totalSec);
-  const dayKg=secToKg(daySec);
-  kgDay.textContent=dayKg.toFixed(2)+" kg";
-  costDay.textContent=(dayKg*(+priceKg.value||15.5)).toFixed(0)+" Kč";
-
-  // MĚSÍC
-  const m=await fetchFeeds("days=30&results=8000");
-  if(m.length>1){
-    const mKg=secToKg(m.at(-1).field8-m[0].field8);
-    kgMonth.textContent=mKg.toFixed(0)+" kg";
-    costMonth.textContent=(mKg*(+priceKg.value||15.5)).toFixed(0)+" Kč";
+    const hSec = hourFeeds.at(-1).field8 - hourFeeds[0].field8;
+    const hKg  = secToKg(hSec);
+    const kW   = hKg*ENERGY*EFF;
+    powerKWbig.textContent = kW.toFixed(1)+" kW";
+    kgHour.textContent = hKg.toFixed(2)+" kg";
   }
 }
 
@@ -189,8 +151,6 @@ updateClock();
 update();
 setInterval(updateClock,1000);
 setInterval(update,30000);
-kg10min.oninput=update;
-priceKg.oninput=update;
 </script>
 
 </body>
