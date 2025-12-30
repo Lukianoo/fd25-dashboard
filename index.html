@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
   <meta charset="utf-8"/>
-  <title>Profi Panel Kotelny - Attack FD 25 (OPRAVENÝ PŘEPPOČET)</title>
+  <title>Profi Panel Kotelny - Attack FD 25 (REAL SPOTŘEBA OD 0:00)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -54,6 +54,8 @@
       margin-bottom: 5px;
     }
     .sub { color: #666; font-size: 13px; margin-top: 5px; }
+    .today { color: #4caf50 !important; }
+    .month { color: #2196f3 !important; }
     
     #chartContainer { 
       height: 350px; 
@@ -116,8 +118,8 @@
 </head>
 <body>
   <header>
-    <div class="datetime" id="dateTime">Úterý, 30. prosince 2025 08:30</div>
-    <div class="last-update" id="lastUpdate">Načítám z ThingSpeak 231269...</div>
+    <div class="datetime" id="dateTime">Úterý, 30. prosince 2025 08:36</div>
+    <div class="last-update" id="lastUpdate">REAL spotřeba OD 0:00 dne / OD 1. měsíce</div>
   </header>
 
   <main>
@@ -168,23 +170,23 @@
 
     <div class="grid">
       <div class="card power-card">
-        <h2>💰 Spotřeba a náklady</h2>
+        <h2>💰 REÁLNÁ SPOTŘEBA (OD 0:00 / OD 1. měsíce)</h2>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin-bottom: 20px;">
           <div>
-            <div class="sub">24h spotřeba</div>
-            <div class="value" id="cons24h">-- kg</div>
+            <div class="sub">DNES od 0:00</div>
+            <div class="value today" id="consToday">0 kg</div>
           </div>
           <div>
-            <div class="sub">Měsíc</div>
-            <div class="value" id="consMonth">-- kg</div>
+            <div class="sub">MĚSÍC od 1.</div>
+            <div class="value month" id="consMonth">0 kg</div>
           </div>
           <div>
-            <div class="sub">Náklady/den</div>
-            <div class="value" id="costDay">-- Kč</div>
+            <div class="sub">Náklady DNES</div>
+            <div class="value" id="costToday">0 Kč</div>
           </div>
           <div>
-            <div class="sub">Náklady/měsíc</div>
-            <div class="value" id="costMonth">-- Kč</div>
+            <div class="sub">Náklady MĚSÍC</div>
+            <div class="value" id="costMonth">0 Kč</div>
           </div>
         </div>
         
@@ -222,32 +224,67 @@
     let chart;
     const ctx = document.getElementById('powerChart').getContext('2d');
     const CHANNEL_ID = 231269;
+    
+    // Dnešní datum od 0:00 (v UTC pro ThingSpeak)
+    function getTodayStart() {
+      const now = new Date();
+      now.setHours(0,0,0,0);
+      return now.toISOString();
+    }
+    
+    // 1. leden aktuálního měsíce
+    function getMonthStart() {
+      const now = new Date();
+      now.setDate(1);
+      now.setHours(0,0,0,0);
+      return now.toISOString();
+    }
 
     // PUBLIC ThingSpeak - BEZ API KEY!
-    async function fetchPublicData() {
+    async function fetchData(period = 'current') {
       try {
-        const currentUrl = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=1`;
-        const response = await fetch(currentUrl);
-        
-        if (!response.ok) {
-          throw new Error('Channel není public');
+        let url;
+        if (period === 'today') {
+          url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?start=${getTodayStart()}&results=8000`;
+        } else if (period === 'month') {
+          url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?start=${getMonthStart()}&results=8000`;
+        } else {
+          url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=1`;
         }
         
+        const response = await fetch(url);
         const data = await response.json();
-        console.log('Data načtena:', data);
         
         if (data.feeds && data.feeds.length > 0) {
-          const feed = data.feeds[0];
-          updateDisplay(feed);
-          document.getElementById('lastUpdate').textContent = `Poslední data: ${new Date(feed.created_at).toLocaleString('cs-CZ')}`;
-          document.getElementById('channelStatus').innerHTML = `<span class="status-good">✅ LIVE DATA OK</span><br>Poslední update: ${new Date(feed.created_at).toLocaleString('cs-CZ')}`;
-        } else {
-          document.getElementById('channelStatus').innerHTML = `<span class="status-warn">⚠️ Žádná data</span>`;
+          return data.feeds;
         }
+        return [];
       } catch (error) {
         console.error('Chyba:', error);
-        document.getElementById('channelStatus').innerHTML = `<span class="status-bad">❌ Channel 231269 není public</span><br><a href="https://thingspeak.com/channels/231269" target="_blank">Nastavte Public → Znovu načtěte</a>`;
+        return [];
       }
+    }
+
+    async function fetchPublicData() {
+      // Aktuální data
+      const currentFeeds = await fetchData('current');
+      if (currentFeeds.length > 0) {
+        const feed = currentFeeds[0];
+        updateDisplay(feed);
+        document.getElementById('channelStatus').innerHTML = `<span class="status-good">✅ LIVE DATA OK (${currentFeeds.length} záznamů)</span>`;
+      }
+      
+      // Spotřeba DNES od 0:00
+      const todayFeeds = await fetchData('today');
+      const todaySeconds = todayFeeds.reduce((sum, feed) => sum + (parseFloat(feed.field8) || 0), 0);
+      calculateConsumption(todaySeconds, 'today');
+      
+      // Spotřeba MĚSÍC od 1.
+      const monthFeeds = await fetchData('month');
+      const monthSeconds = monthFeeds.reduce((sum, feed) => sum + (parseFloat(feed.field8) || 0), 0);
+      calculateConsumption(monthSeconds, 'month');
+      
+      document.getElementById('lastUpdate').textContent = `Poslední data: ${new Date().toLocaleString('cs-CZ')}`;
     }
 
     function updateDisplay(feed) {
@@ -257,7 +294,7 @@
         field3: parseFloat(feed.field3) || 0,
         field4: parseFloat(feed.field4) || 0,
         field5: parseFloat(feed.field5) || 0,
-        field8: parseFloat(feed.field8) || 780
+        field8: parseFloat(feed.field8) || 0
       };
 
       document.getElementById('field1').textContent = fields.field1.toFixed(1) + ' °C';
@@ -266,58 +303,40 @@
       document.getElementById('field4').textContent = fields.field4.toFixed(1) + ' °C';
       document.getElementById('field5').textContent = fields.field5.toFixed(1) + ' °C';
       
-      // ČAS PODAVAČE V SEKUNDÁCH → PŘEPPOČET NA HODINY
       const totalSeconds = fields.field8;
       const totalHours = (totalSeconds / 3600).toFixed(1);
       const hours = Math.floor(totalSeconds / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
-      document.getElementById('field8').innerHTML = `${totalSeconds.toLocaleString()} s<br><small>${totalHours} h (${hours}h ${minutes}m)</small>`;
-
-      updateCalculations(fields.field8);
+      document.getElementById('field8').innerHTML = `${totalSeconds.toLocaleString()} s<br><small>${totalHours} h</small>`;
     }
 
-    // ✅ OPRAVENÝ PŘEPPOČET: ČAS PODAVAČE → SPOTŘEBA UHLÍ
-    function updateCalculations(totalSeconds) {
+    // ✅ REAL SPOTŘEBA OD 0:00 / OD 1. MĚSÍCE
+    function calculateConsumption(totalSeconds, period) {
       const feedRate10min = parseFloat(document.getElementById('feedRate10min').value) || 0;
       const pricePerKg = parseFloat(document.getElementById('pricePerKg').value) || 0;
       
-      // 1. Celkový čas podavače v hodinách
+      // Celkový čas v hodinách → kolik 10min cyklů
       const totalHours = totalSeconds / 3600;
+      const total10minCycles = totalHours * 6; // 6 × 10min = 1 hodina
       
-      // 2. 24h spotřeba = kolik 10min cyklů bylo za posledních 24h
-      const hoursIn24h = 24;
-      const cyclesIn10minPerDay = hoursIn24h * 6; // 6 × 10min = 1 hodina
-      const cons24h = feedRate10min * cyclesIn10minPerDay;
+      // Spotřeba uhlí
+      const consumptionKg = total10minCycles * feedRate10min;
       
-      // 3. Měsíční = 30 dní
-      const consMonth = cons24h * 30;
+      // Náklady
+      const cost = consumptionKg * pricePerKg;
       
-      // 4. Náklady
-      const costDay = cons24h * pricePerKg;
-      const costMonth = consMonth * pricePerKg;
-      
-      // ZOBRAZENÍ
-      document.getElementById('cons24h').textContent = cons24h.toFixed(1) + ' kg';
-      document.getElementById('consMonth').textContent = consMonth.toFixed(0) + ' kg';
-      document.getElementById('costDay').textContent = costDay.toFixed(0) + ' Kč';
-      document.getElementById('costMonth').textContent = costMonth.toFixed(0) + ' Kč';
+      if (period === 'today') {
+        document.getElementById('consToday').textContent = consumptionKg.toFixed(1) + ' kg';
+        document.getElementById('costToday').textContent = cost.toFixed(0) + ' Kč';
+      } else if (period === 'month') {
+        document.getElementById('consMonth').textContent = consumptionKg.toFixed(0) + ' kg';
+        document.getElementById('costMonth').textContent = cost.toFixed(0) + ' Kč';
+      }
       
       // Výkon kotle
       const boilerTemp = parseFloat(document.getElementById('field5').textContent) || 0;
       const power = Math.min(Math.max((boilerTemp - 40) * 0.8, 0), 25);
       document.getElementById('currentPower').textContent = power.toFixed(1) + ' kW';
-      
-      // Stav kotle
-      if (boilerTemp > 75) {
-        document.getElementById('powerStatus').textContent = 'Attack FD 25 - PLNÝ VÝKON';
-        document.getElementById('powerStatus').className = 'sub status-good';
-      } else if (boilerTemp > 60) {
-        document.getElementById('powerStatus').textContent = 'Attack FD 25 - OPTIMÁLNÍ';
-        document.getElementById('powerStatus').className = 'sub status-good';
-      } else {
-        document.getElementById('powerStatus').textContent = 'Attack FD 25 - REGULACE';
-        document.getElementById('powerStatus').className = 'sub status-warn';
-      }
     }
 
     function initChart() {
@@ -326,8 +345,8 @@
         data: {
           labels: Array.from({length: 24}, (_, i) => `${i+1}h`),
           datasets: [{
-            label: 'Podávací rychlost (kg/h)',
-            data: [1.8,2.2,2.5,2.1,1.9,2.3,2.0,1.7,2.4,2.8,2.1,1.9,2.2,2.6,2.3,2.0,1.8,2.1,2.4,2.7,2.2,1.9,2.0,2.3],
+            label: 'Čas podavače (s)',
+            data: [120,180,250,200,150,300,220,100,280,350,240,160,290,320,270,190,140,210,260,310,230,170,200,240],
             borderColor: '#d32f2f',
             backgroundColor: 'rgba(211, 47, 47, 0.1)',
             tension: 0.4,
@@ -349,8 +368,8 @@
     }
 
     // Eventy
-    document.getElementById('feedRate10min').addEventListener('input', () => updateCalculations(780));
-    document.getElementById('pricePerKg').addEventListener('input', () => updateCalculations(780));
+    document.getElementById('feedRate10min').addEventListener('input', fetchPublicData);
+    document.getElementById('pricePerKg').addEventListener('input', fetchPublicData);
 
     // START
     initChart();
@@ -358,7 +377,7 @@
     fetchPublicData();
     
     setInterval(updateClock, 1000);
-    setInterval(fetchPublicData, 30000);
+    setInterval(fetchPublicData, 60000); // Každou minutu
   </script>
 </body>
 </html>
