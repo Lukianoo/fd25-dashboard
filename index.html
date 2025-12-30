@@ -144,9 +144,11 @@ async function loadData() {
     t("t_zpatecka", last.field1);
     t("t_podavac", last.field2);
 
-    const feederNow = parseFloat(last.field8 || 0);
-    const feeder24 = parseFloat(f[0].field8 || 0);
-    const diffMin = feederNow - feeder24;
+    const feederNowSec = parseFloat(last.field8 || 0);
+const feeder24Sec = parseFloat(f[0].field8 || 0);
+
+const diffMin = (feederNowSec - feeder24Sec) / 60;
+
 
     const kg10 = parseFloat(document.getElementById("kg10").value);
     const kgPerMin = kg10 / 10;
@@ -162,8 +164,10 @@ async function loadData() {
 
     // výkon kotle (odhad)
     const lastHour = f.slice(-12);
-    const runMin = lastHour[lastHour.length-1].field8 - lastHour[0].field8;
-    const power = Math.min(25, (runMin/60)*25);
+    const runSec = lastHour[lastHour.length-1].field8 - lastHour[0].field8;
+const runMin = runSec / 60;
+const power = Math.min(25, (runMin / 60) * 25);
+
     document.getElementById("vykon").innerText = power.toFixed(1)+" kW";
 
     drawChart(f);
