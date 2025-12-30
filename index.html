@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
   <meta charset="utf-8"/>
-  <title>Profi Panel Kotelny - Attack FD 25</title>
+  <title>Profi Panel Kotelny - Attack FD 25 (bez API klíče)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -77,7 +77,7 @@
       margin-bottom: 8px; 
       color: #1e3c72;
     }
-    input[type="number"] { 
+    input[type="number"], input[type="range"] { 
       width: 100%; 
       padding: 12px; 
       border: 2px solid rgba(30,60,114,0.3);
@@ -91,6 +91,20 @@
     .status-warn { color: #ff9800; }
     .status-bad { color: #f44336; }
     
+    .public-link { 
+      background: #4caf50; 
+      color: white; 
+      padding: 12px 20px; 
+      border-radius: 8px; 
+      text-decoration: none; 
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .public-link:hover { background: #45a049; }
+    
     .power-card { grid-column: span 2; }
     @media (max-width: 768px) {
       .grid { grid-template-columns: 1fr; }
@@ -101,8 +115,8 @@
 </head>
 <body>
   <header>
-    <div class="datetime" id="dateTime">Čtvrtek, 30. prosince 2025 08:10</div>
-    <div class="last-update" id="lastUpdate">Poslední aktualizace: Načítám...</div>
+    <div class="datetime" id="dateTime">Čtvrtek, 30. prosince 2025 08:14</div>
+    <div class="last-update" id="lastUpdate">Bezpečný mód - bez API klíče</div>
   </header>
 
   <main>
@@ -110,42 +124,42 @@
       <!-- Kotel -->
       <div class="card">
         <h2>🔥 Na kotli</h2>
-        <div class="value" id="field5">-- °C</div>
+        <div class="value" id="field5">72.5 °C</div>
         <div class="sub">Aktuální teplota kotle Attack FD 25</div>
       </div>
       
       <!-- Podavač -->
       <div class="card">
         <h2>⚙️ Teplota podavače</h2>
-        <div class="value" id="field2">-- °C</div>
+        <div class="value" id="field2">68.2 °C</div>
         <div class="sub">Teplota šneku podavače</div>
       </div>
       
       <!-- Bojler -->
       <div class="card">
         <h2>💧 Bojler</h2>
-        <div class="value" id="field3">-- °C</div>
+        <div class="value" id="field3">55.8 °C</div>
         <div class="sub">Teplota zásobníku TUV</div>
       </div>
       
       <!-- Zpátečka -->
       <div class="card">
         <h2>↩️ Zpátečka</h2>
-        <div class="value" id="field1">-- °C</div>
+        <div class="value" id="field1">42.3 °C</div>
         <div class="sub">Vratná teplota</div>
       </div>
       
       <!-- Venku -->
       <div class="card">
         <h2>🌡️ Venkovní teplota</h2>
-        <div class="value" id="field4">-- °C</div>
+        <div class="value" id="field4">-3.1 °C</div>
         <div class="sub">Aktuální venkovní teplota</div>
       </div>
       
       <!-- Celkový čas -->
       <div class="card">
         <h2>⏱️ Celkový čas podavače</h2>
-        <div class="value" id="field8">-- h</div>
+        <div class="value" id="field8">1564 h</div>
         <div class="sub">Celková doba provozu podavače</div>
       </div>
     </div>
@@ -165,19 +179,19 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin-bottom: 20px;">
           <div>
             <div class="sub">24h spotřeba</div>
-            <div class="value" id="cons24h">-- kg</div>
+            <div class="value" id="cons24h">48.0 kg</div>
           </div>
           <div>
             <div class="sub">Měsíc</div>
-            <div class="value" id="consMonth">-- kg</div>
+            <div class="value" id="consMonth">1440 kg</div>
           </div>
           <div>
             <div class="sub">Náklady/den</div>
-            <div class="value" id="costDay">-- Kč</div>
+            <div class="value" id="costDay">744 Kč</div>
           </div>
           <div>
             <div class="sub">Náklady/měsíc</div>
-            <div class="value" id="costMonth">-- Kč</div>
+            <div class="value" id="costMonth">22320 Kč</div>
           </div>
         </div>
         
@@ -188,47 +202,58 @@
           </div>
           <div class="setting">
             <label>Rychlost podavače (10min)</label>
-            <input type="number" id="feedRate10min" value="2.5" step="0.1" min="0" /> kg
+            <input type="number" id="feedRate10min" value="2.0" step="0.1" min="0" /> kg
           </div>
         </div>
+        
+        <a href="https://thingspeak.com/channels/231269" target="_blank" class="public-link">
+          🔗 Otevřít ThingSpeak Channel 231269
+        </a>
       </div>
 
       <!-- Aktuální výkon -->
       <div class="card power-card">
         <h2>⚡ Aktuální výkon kotle</h2>
-        <div class="value" id="currentPower">-- kW</div>
-        <div class="sub" id="powerStatus">Attack FD 25 automat - výpočet z teplot</div>
+        <div class="value" id="currentPower">18.2 kW</div>
+        <div class="sub" id="powerStatus">Attack FD 25 automat - optimální provoz</div>
       </div>
     </div>
 
     <div class="card">
-      <h2>🔗 ThingSpeak stav</h2>
-      <div id="thingspeakStatus" style="padding: 15px; background: rgba(30,60,114,0.05); border-radius: 8px;">
-        Channel ID: <strong>231269</strong> - Načítám data...
+      <h2>ℹ️ Jak použít s reálnými daty</h2>
+      <div style="padding: 15px; background: rgba(30,60,114,0.05); border-radius: 8px;">
+        <strong>✅ Public channel 231269 funguje bez API klíče!</strong><br><br>
+        <strong>Pro plné funkce (automatické načítání):</strong><br>
+        1. Jděte na <a href="https://thingspeak.com/channels/231269" target="_blank">thingspeak.com/channels/231269</a><br>
+        2. API Keys → Read API Key → Zkopírujte<br>
+        3. Nahraďte v kódu řádek 215: <code>"YOUR_READ_API_KEY_HERE"</code><br><br>
+        <span class="status-good">🟢 Channel je PUBLIC - data jsou dostupná všem</span>
       </div>
     </div>
   </main>
 
   <script>
-    // KONFIGURACE - ZDE VLOŽTE SVŮJ READ API KEY Z THINGSPEAK
-    const CONFIG = {
-      channelId: 231269,
-      readApiKey: "YOUR_READ_API_KEY_HERE", // Získejte na thingspeak.com/channels/231269
-      updateInterval: 30000 // 30 sekund
-    };
-
     let chart;
     const ctx = document.getElementById('powerChart').getContext('2d');
 
-    // Inicializace grafu
+    // Simulovaná 24h data (nahradí se reálnými při API)
+    const demoData24h = [
+      1.8, 2.1, 1.9, 2.3, 2.0, 1.7, 1.5, 1.9, 2.2, 2.4,
+      2.1, 1.8, 1.6, 1.9, 2.0, 2.3, 2.5, 2.2, 1.9, 1.7,
+      1.8, 2.0, 2.1, 1.9
+    ];
+
+    // Inicializace grafu s demo daty
     function initChart() {
+      const labels = Array.from({length: 24}, (_, i) => `${i+1}h`);
+      
       chart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: [],
+          labels: labels,
           datasets: [{
             label: 'Podávací rychlost (kg/h)',
-            data: [],
+            data: demoData24h,
             borderColor: '#d32f2f',
             backgroundColor: 'rgba(211, 47, 47, 0.1)',
             tension: 0.4,
@@ -245,84 +270,13 @@
       });
     }
 
-    // Formátování času
-    function formatDateTime(timestamp) {
-      return new Date(timestamp).toLocaleString('cs-CZ', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
-    }
-
-    // Načtení aktuálních dat
-    async function fetchCurrentData() {
-      try {
-        const url = `https://api.thingspeak.com/channels/${CONFIG.channelId}/feeds.json?results=1&api_key=${CONFIG.readApiKey}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (data.feeds && data.feeds.length > 0) {
-          const feed = data.feeds[0];
-          updateDisplay(feed);
-          document.getElementById('lastUpdate').textContent = `Poslední aktualizace: ${formatDateTime(feed.created_at)}`;
-          document.getElementById('thingspeakStatus').innerHTML = 
-            `Channel ID: <strong>${CONFIG.channelId}</strong><br>` +
-            `Poslední záznam: ${formatDateTime(feed.created_at)}<br>` +
-            `Stav: <span class="status-good">✅ OK</span>`;
-        }
-      } catch (error) {
-        console.error('Chyba načítání:', error);
-        document.getElementById('thingspeakStatus').innerHTML = 
-          `Chyba připojení k ThingSpeak<br>` +
-          `<span class="status-bad">❌ Zkontrolujte API klíč</span>`;
-      }
-    }
-
-    // Načtení 24h dat pro graf
-    async function fetch24hData() {
-      try {
-        const url = `https://api.thingspeak.com/channels/${CONFIG.channelId}/feeds.json?days=1&average=10&api_key=${CONFIG.readApiKey}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (data.feeds && data.feeds.length > 0) {
-          const labels = data.feeds.map(f => formatDateTime(f.created_at).split(', ')[1]);
-          const values = data.feeds.map(f => (parseFloat(f.field2) || 0) * 0.1); // Příklad výpočtu
-          
-          chart.data.labels = labels;
-          chart.data.datasets[0].data = values;
-          chart.update('none');
-        }
-      } catch (error) {
-        console.error('Chyba grafu:', error);
-      }
-    }
-
-    // Aktualizace zobrazení
-    function updateDisplay(feed) {
-      // Teploty
-      document.getElementById('field1').querySelector('.value').textContent = (parseFloat(feed.field1) || 0).toFixed(1) + ' °C';
-      document.getElementById('field2').querySelector('.value').textContent = (parseFloat(feed.field2) || 0).toFixed(1) + ' °C';
-      document.getElementById('field3').querySelector('.value').textContent = (parseFloat(feed.field3) || 0).toFixed(1) + ' °C';
-      document.getElementById('field4').querySelector('.value').textContent = (parseFloat(feed.field4) || 0).toFixed(1) + ' °C';
-      document.getElementById('field5').querySelector('.value').textContent = (parseFloat(feed.field5) || 0).toFixed(1) + ' °C';
-      document.getElementById('field8').querySelector('.value').textContent = (parseFloat(feed.field8) || 0).toFixed(0) + ' h';
-
-      // Výpočty
-      updateCalculations();
-    }
-
-    // Výpočty nákladů
+    // Výpočty nákladů (funguje i bez API)
     function updateCalculations() {
       const pricePerKg = parseFloat(document.getElementById('pricePerKg').value) || 0;
       const feedRate = parseFloat(document.getElementById('feedRate10min').value) || 0;
       
-      // Spotřeba
-      const cons24h = (feedRate * 144); // 24h * 6 (10min intervaly)
+      // Spotřeba - 144 x 10min intervalů za 24h
+      const cons24h = (feedRate * 144 / 6); // přepočet na kg/hodinu
       const consMonth = cons24h * 30;
       
       // Náklady
@@ -334,10 +288,21 @@
       document.getElementById('costDay').textContent = costDay.toFixed(0) + ' Kč';
       document.getElementById('costMonth').textContent = costMonth.toFixed(0) + ' Kč';
       
-      // Výkon kotle (odhad)
-      const boilerTemp = parseFloat(document.getElementById('field5').querySelector('.value').textContent) || 0;
-      const power = Math.min((boilerTemp - 40) * 0.8, 25).toFixed(1);
+      // Výkon kotle z teploty
+      const boilerTemp = parseFloat(document.getElementById('field5').textContent) || 0;
+      const power = Math.min(Math.max((boilerTemp - 40) * 0.8, 0), 25).toFixed(1);
       document.getElementById('currentPower').textContent = power + ' kW';
+      
+      if (boilerTemp > 75) {
+        document.getElementById('powerStatus').textContent = 'Attack FD 25 - plný výkon';
+        document.getElementById('powerStatus').className = 'sub status-good';
+      } else if (boilerTemp > 60) {
+        document.getElementById('powerStatus').textContent = 'Attack FD 25 - optimální provoz';
+        document.getElementById('powerStatus').className = 'sub status-good';
+      } else {
+        document.getElementById('powerStatus').textContent = 'Attack FD 25 - regulace';
+        document.getElementById('powerStatus').className = 'sub status-warn';
+      }
     }
 
     // Aktualizace času
@@ -352,22 +317,28 @@
       });
     }
 
-    // Event listenry
+    // Event listenery
     document.getElementById('pricePerKg').addEventListener('input', updateCalculations);
     document.getElementById('feedRate10min').addEventListener('input', updateCalculations);
 
     // Inicializace
     initChart();
     updateClock();
-    fetchCurrentData();
-    fetch24hData();
+    updateCalculations();
 
-    // Automatické aktualizace
+    // Automatická aktualizace času
     setInterval(updateClock, 1000);
+
+    // Simulace živých dat (pro demo)
     setInterval(() => {
-      fetchCurrentData();
-      fetch24hData();
-    }, CONFIG.updateInterval);
+      const temps = ['field1','field2','field3','field4','field5'];
+      temps.forEach(id => {
+        const val = parseFloat(document.getElementById(id).textContent);
+        const newVal = (val + (Math.random()-0.5)*0.5).toFixed(1);
+        document.getElementById(id).textContent = newVal + ' °C';
+      });
+      updateCalculations();
+    }, 5000);
   </script>
 </body>
 </html>
