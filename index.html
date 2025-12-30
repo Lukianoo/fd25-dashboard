@@ -4,166 +4,137 @@
 <meta charset="utf-8"/>
 <title>Profi Panel Kotelny – Attack FD 25</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
-*{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:Segoe UI,Tahoma,Verdana,sans-serif;
-  background:linear-gradient(135deg,#1e3c72,#2a5298);
-}
-header{
-  background:#000;
-  color:#fff;
-  padding:15px 20px;
-  display:flex;
-  justify-content:space-between;
-}
+body{margin:0;font-family:Segoe UI;background:#1e3c72;color:#000}
+header{background:#000;color:#fff;padding:15px 20px;display:flex;justify-content:space-between}
 main{padding:20px;max-width:1400px;margin:auto}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
-.card{
-  background:#fff;
-  border-radius:15px;
-  padding:20px;
-  box-shadow:0 10px 30px rgba(0,0,0,.2)
-}
-h2{margin:0 0 10px;font-size:16px;color:#1e3c72}
-.value{font-size:34px;font-weight:700;color:#d32f2f}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.card{background:#fff;border-radius:15px;padding:20px}
+.value{font-size:32px;font-weight:700;color:#d32f2f}
 .sub{font-size:13px;color:#555}
 .today{color:#4caf50}
 .month{color:#2196f3}
-.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:15px}
-.setting{background:#eef;padding:12px;border-radius:8px}
-input{width:100%;padding:10px;font-size:15px}
+input{width:100%;padding:10px}
 </style>
 </head>
 
 <body>
-
 <header>
-  <div id="dateTime"></div>
-  <div>✅ Výpočty OPRAVENY</div>
+  <div id="clock"></div>
+  <div>🔥 Reálný výkon + denní reset</div>
 </header>
 
 <main>
 
 <div class="grid">
-  <div class="card"><h2>🔥 Kotel</h2><div class="value" id="field5">--</div></div>
-  <div class="card"><h2>⚙️ Podavač</h2><div class="value" id="field2">--</div></div>
-  <div class="card"><h2>💧 Bojler</h2><div class="value" id="field3">--</div></div>
-  <div class="card"><h2>↩️ Zpátečka</h2><div class="value" id="field1">--</div></div>
-  <div class="card"><h2>🌡️ Venku</h2><div class="value" id="field4">--</div></div>
-  <div class="card"><h2>⏱️ Podavač čas</h2><div class="value" id="field8">--</div></div>
+  <div class="card"><div class="sub">Teplota kotle</div><div class="value" id="field5">--</div></div>
+  <div class="card"><div class="sub">Čas podavače</div><div class="value" id="field8">--</div></div>
 </div>
 
 <br>
 
 <div class="card">
-<h2>💰 SPOTŘEBA</h2>
+  <div class="sub">AKTUÁLNĚ</div>
+  <div class="value today" id="consCurrent">0 kg</div>
 
-<div class="grid">
-  <div><div class="sub">AKTUÁLNĚ</div><div class="value today" id="consCurrent">0 kg</div></div>
-  <div><div class="sub">DNES</div><div class="value today" id="consToday">0 kg</div></div>
-  <div><div class="sub">MĚSÍC</div><div class="value month" id="consMonth">0 kg</div></div>
-  <div><div class="sub">NÁKLADY DNES</div><div class="value" id="costToday">0 Kč</div></div>
-</div>
+  <div class="sub">DNES</div>
+  <div class="value today" id="consToday">0 kg</div>
 
-<div class="settings-grid">
-  <div class="setting">
-    <label>Kg / 10 min</label>
-    <input type="number" id="feedRate10min" value="2.5" step="0.1">
-  </div>
-  <div class="setting">
-    <label>Cena / kg</label>
-    <input type="number" id="pricePerKg" value="15.5" step="0.1">
-  </div>
-</div>
+  <div class="sub">MĚSÍC</div>
+  <div class="value month" id="consMonth">0 kg</div>
+
+  <div class="sub">VÝKON (reálný)</div>
+  <div class="value" id="realPower">0 kW</div>
 </div>
 
 <br>
 
 <div class="card">
-<h2>⚡ Odhad výkonu</h2>
-<div class="value" id="currentPower">-- kW</div>
-<div class="sub">Odhad z teploty kotle</div>
+  <div class="sub">Kg / 10 min</div>
+  <input type="number" id="feedRate10min" value="2.5" step="0.1">
+
+  <div class="sub">Cena / kg</div>
+  <input type="number" id="pricePerKg" value="15.5" step="0.1">
 </div>
 
 </main>
 
 <script>
 const CHANNEL_ID = 231269;
-const feedRate10minInput = document.getElementById("feedRate10min");
-const pricePerKgInput = document.getElementById("pricePerKg");
+const COAL_ENERGY = 4.8;
+const BOILER_EFF = 0.75;
 
-function updateClock(){
-  dateTime.textContent = new Date().toLocaleString("cs-CZ");
+const feedRateInput = document.getElementById("feedRate10min");
+
+function clock(){
+  clockEl.textContent = new Date().toLocaleString("cs-CZ");
+}
+const clockEl = document.getElementById("clock");
+
+function secondsToKg(sec){
+  return (sec/600)*(parseFloat(feedRateInput.value)||2.5);
 }
 
-function secondsToKg(seconds){
-  return (seconds / 600) * (parseFloat(feedRate10minInput.value) || 2.5);
+function kgPerHour(seconds){
+  return secondsToKg(seconds);
 }
 
-function diffField8(feeds){
-  if(feeds.length < 2) return 0;
-  const first = parseFloat(feeds[0].field8)||0;
-  const last  = parseFloat(feeds.at(-1).field8)||0;
-  return Math.max(last-first,0);
+function powerFromKgH(kgH){
+  return kgH * COAL_ENERGY * BOILER_EFF;
 }
 
-function estimatePower(temp){
-  if(temp < 50) return 0;
-  return Math.min((temp-50)*0.9,25);
+function todayKey(){
+  return new Date().toISOString().slice(0,10);
 }
 
-async function fetchData(params){
-  const r = await fetch(`https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?${params}`);
-  const j = await r.json();
-  return j.feeds || [];
+function dailyBase(){
+  const k = todayKey();
+  if(localStorage.day !== k){
+    localStorage.day = k;
+    localStorage.base8 = null;
+  }
 }
 
-async function updateAll(){
+async function fetchData(p){
+  const r = await fetch(`https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?${p}`);
+  return (await r.json()).feeds||[];
+}
+
+async function update(){
+  dailyBase();
+
   const cur = await fetchData("results=1");
   if(!cur.length) return;
 
   const f = cur[0];
-  const temps = ["field1","field2","field3","field4","field5"];
-  temps.forEach(id=>{
-    document.getElementById(id).textContent =
-      (parseFloat(f[id])||0).toFixed(1)+" °C";
-  });
+  const sec = parseFloat(f.field8)||0;
 
-  const currentSeconds = parseFloat(f.field8)||0;
-  const currentKg = secondsToKg(currentSeconds);
+  if(localStorage.base8===null){
+    localStorage.base8 = sec;
+  }
 
-  field8.innerHTML =
-    `${currentSeconds}s<br><small>${currentKg.toFixed(2)} kg</small>`;
-  consCurrent.textContent = currentKg.toFixed(2)+" kg";
+  const todaySec = sec - parseFloat(localStorage.base8);
 
-  const todayFeeds = await fetchData("days=1&results=8000");
-  const todaySeconds = diffField8(todayFeeds);
-  const todayKg = secondsToKg(todaySeconds);
+  field5.textContent = (parseFloat(f.field5)||0).toFixed(1)+" °C";
+  field8.textContent = sec+" s";
 
-  consToday.textContent = todayKg.toFixed(2)+" kg";
-  costToday.textContent =
-    (todayKg * (parseFloat(pricePerKgInput.value)||15.5)).toFixed(0)+" Kč";
+  consCurrent.textContent = secondsToKg(sec).toFixed(2)+" kg";
+  consToday.textContent = secondsToKg(todaySec).toFixed(2)+" kg";
 
   const monthFeeds = await fetchData("days=30&results=8000");
-  consMonth.textContent =
-    secondsToKg(diffField8(monthFeeds)).toFixed(0)+" kg";
+  if(monthFeeds.length>1){
+    const m = monthFeeds.at(-1).field8 - monthFeeds[0].field8;
+    consMonth.textContent = secondsToKg(m).toFixed(0)+" kg";
+  }
 
-  currentPower.textContent =
-    estimatePower(parseFloat(f.field5)||0).toFixed(1)+" kW";
+  const power = powerFromKgH(kgPerHour(sec));
+  realPower.textContent = power.toFixed(1)+" kW";
 }
 
-feedRate10minInput.oninput = updateAll;
-pricePerKgInput.oninput = updateAll;
-
-updateClock();
-updateAll();
-setInterval(updateClock,1000);
-setInterval(updateAll,30000);
+clock();
+update();
+setInterval(clock,1000);
+setInterval(update,30000);
 </script>
-
 </body>
 </html>
