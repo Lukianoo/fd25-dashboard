@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
   <meta charset="utf-8"/>
-  <title>Profi Panel Kotelny - Attack FD 25 (opravené hodnoty)</title>
+  <title>Profi Panel Kotelny - Attack FD 25 (PUBLIC DATA)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -103,6 +103,9 @@
       margin: 10px 0;
     }
     
+    .loading { color: #ff9800; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    
     .power-card { grid-column: span 2; }
     @media (max-width: 768px) {
       .grid { grid-template-columns: 1fr; }
@@ -113,56 +116,49 @@
 </head>
 <body>
   <header>
-    <div class="datetime" id="dateTime">Úterý, 30. prosince 2025 08:20</div>
-    <div class="last-update" id="lastUpdate">Demo módy - upravte své hodnoty</div>
+    <div class="datetime" id="dateTime">Úterý, 30. prosince 2025 08:24</div>
+    <div class="last-update" id="lastUpdate">Načítám z ThingSpeak 231269...</div>
   </header>
 
   <main>
     <div class="grid">
-      <!-- Field 5: Na kotli -->
       <div class="card">
         <h2>🔥 Na kotli</h2>
-        <div class="value" id="field5">-- °C</div>
+        <div class="value loading" id="field5">Načítám...</div>
         <div class="sub">Field 5: Teplota kotle Attack FD 25</div>
       </div>
       
-      <!-- Field 2: Teplota podavače -->
       <div class="card">
         <h2>⚙️ Teplota podavače</h2>
-        <div class="value" id="field2">-- °C</div>
+        <div class="value loading" id="field2">Načítám...</div>
         <div class="sub">Field 2: Teplota šneku</div>
       </div>
       
-      <!-- Field 3: Bojler -->
       <div class="card">
         <h2>💧 Bojler</h2>
-        <div class="value" id="field3">-- °C</div>
+        <div class="value loading" id="field3">Načítám...</div>
         <div class="sub">Field 3: TUV zásobník</div>
       </div>
       
-      <!-- Field 1: Zpátečka -->
       <div class="card">
         <h2>↩️ Zpátečka</h2>
-        <div class="value" id="field1">-- °C</div>
+        <div class="value loading" id="field1">Načítám...</div>
         <div class="sub">Field 1: Vratná teplota</div>
       </div>
       
-      <!-- Field 4: Venku -->
       <div class="card">
         <h2>🌡️ Venku</h2>
-        <div class="value" id="field4">-- °C</div>
+        <div class="value loading" id="field4">Načítám...</div>
         <div class="sub">Field 4: Venkovní teplota</div>
       </div>
       
-      <!-- Field 8: Čas podavače (SEKUNDY) -->
       <div class="card">
         <h2>⏱️ Čas podavače</h2>
-        <div class="value" id="field8">-- s</div>
-        <div class="sub">Field 8: Celkový čas v sekundách<br><small>(přepočet: -- hodin)</small></div>
+        <div class="value loading" id="field8">Načítám...</div>
+        <div class="sub">Field 8: Celkový čas v sekundách</div>
       </div>
     </div>
 
-    <!-- Graf 24h -->
     <div class="card">
       <h2>📈 Podávací rychlost - posledních 24h</h2>
       <div id="chartContainer">
@@ -171,7 +167,6 @@
     </div>
 
     <div class="grid">
-      <!-- Náklady a spotřeba -->
       <div class="card power-card">
         <h2>💰 Spotřeba a náklady</h2>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin-bottom: 20px;">
@@ -199,98 +194,96 @@
             <input type="number" id="pricePerKg" value="15.50" step="0.01" min="0" /> Kč
           </div>
           <div class="setting">
-            <label>Podavač přepraví za 10min</label>
+            <label>Podavač za 10min</label>
             <input type="number" id="feedRate10min" value="2.5" step="0.1" min="0" /> kg
           </div>
         </div>
-        
-        <a href="https://thingspeak.com/channels/231269" target="_blank" class="public-link">
-          🔗 ThingSpeak Channel 231269
-        </a>
       </div>
 
-      <!-- Výkon kotle -->
       <div class="card power-card">
         <h2>⚡ Výkon kotle</h2>
         <div class="value" id="currentPower">-- kW</div>
-        <div class="sub" id="powerStatus">Attack FD 25 - nastavte teploty</div>
+        <div class="sub" id="powerStatus">Attack FD 25 - načítám data</div>
       </div>
     </div>
 
-    <!-- Manuální zadání hodnot -->
     <div class="card">
-      <h2>✏️ Manuální zadání hodnot (pro test)</h2>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 15px;">
-        <div class="setting">
-          <label>Field 1 (zpátečka)</label>
-          <input type="number" id="manual1" step="0.1" value="45.0" />
-        </div>
-        <div class="setting">
-          <label>Field 2 (podavač)</label>
-          <input type="number" id="manual2" step="0.1" value="65.0" />
-        </div>
-        <div class="setting">
-          <label>Field 3 (bojler)</label>
-          <input type="number" id="manual3" step="0.1" value="52.0" />
-        </div>
-        <div class="setting">
-          <label>Field 4 (venku)</label>
-          <input type="number" id="manual4" step="0.1" value="-2.5" />
-        </div>
-        <div class="setting">
-          <label>Field 5 (kotel)</label>
-          <input type="number" id="manual5" step="0.1" value="78.0" />
-        </div>
-        <div class="setting">
-          <label>Field 8 (sekundy)</label>
-          <input type="number" id="manual8" step="1" value="562500" />
-        </div>
+      <h2>🔗 ThingSpeak Channel 231269</h2>
+      <div id="status" style="padding: 15px; background: rgba(30,60,114,0.05); border-radius: 8px;">
+        <a href="https://thingspeak.com/channels/231269" target="_blank" class="public-link">
+          🔗 Otevřít veřejný channel
+        </a>
+        <div id="channelStatus" style="margin-top: 10px;">Načítám...</div>
       </div>
-      <button onclick="loadManualValues()" style="margin-top:15px; padding:12px 24px; background:#1e3c72; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer;">📊 Načíst hodnoty</button>
     </div>
   </main>
 
   <script>
     let chart;
     const ctx = document.getElementById('powerChart').getContext('2d');
+    const CHANNEL_ID = 231269;
 
-    // Demo data pro graf
-    const demoData24h = [1.8,2.2,2.5,2.1,1.9,2.3,2.0,1.7,2.4,2.8,2.1,1.9,2.2,2.6,2.3,2.0,1.8,2.1,2.4,2.7,2.2,1.9,2.0,2.3];
-
-    function initChart() {
-      const labels = Array.from({length: 24}, (_, i) => `${i+1}h`);
-      
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Podávací rychlost (kg/h)',
-            data: demoData24h,
-            borderColor: '#d32f2f',
-            backgroundColor: 'rgba(211, 47, 47, 0.1)',
-            tension: 0.4,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }
-          }
+    // PUBLIC ThingSpeak - BEZ API KEY!
+    async function fetchPublicData() {
+      try {
+        // PUBLIC channel data - funguje bez klíče!
+        const currentUrl = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=1`;
+        const response = await fetch(currentUrl);
+        
+        if (!response.ok) {
+          throw new Error('Channel není public nebo chyba');
         }
-      });
+        
+        const data = await response.json();
+        console.log('Data načtena:', data);
+        
+        if (data.feeds && data.feeds.length > 0) {
+          const feed = data.feeds[0];
+          updateDisplay(feed);
+          document.getElementById('lastUpdate').textContent = `Poslední data: ${new Date(feed.created_at).toLocaleString('cs-CZ')}`;
+          document.getElementById('channelStatus').innerHTML = `<span class="status-good">✅ LIVE DATA OK</span><br>Poslední update: ${new Date(feed.created_at).toLocaleString('cs-CZ')}`;
+        } else {
+          document.getElementById('channelStatus').innerHTML = `<span class="status-warn">⚠️ Žádná data v channelu</span>`;
+        }
+      } catch (error) {
+        console.error('Chyba:', error);
+        document.getElementById('channelStatus').innerHTML = `<span class="status-bad">❌ Channel 231269 není public nebo chyba</span><br>Zkuste: <a href="https://thingspeak.com/channels/231269" target="_blank">thingspeak.com/channels/231269</a>`;
+      }
+    }
+
+    function updateDisplay(feed) {
+      // Field 1-5,8 z ThingSpeak
+      const fields = {
+        field1: parseFloat(feed.field1) || 0,
+        field2: parseFloat(feed.field2) || 0,
+        field3: parseFloat(feed.field3) || 0,
+        field4: parseFloat(feed.field4) || 0,
+        field5: parseFloat(feed.field5) || 0,
+        field8: parseFloat(feed.field8) || 780 // aktuální ~780s
+      };
+
+      // Zobrazení teplot
+      document.getElementById('field1').textContent = fields.field1.toFixed(1) + ' °C';
+      document.getElementById('field2').textContent = fields.field2.toFixed(1) + ' °C';
+      document.getElementById('field3').textContent = fields.field3.toFixed(1) + ' °C';
+      document.getElementById('field4').textContent = fields.field4.toFixed(1) + ' °C';
+      document.getElementById('field5').textContent = fields.field5.toFixed(1) + ' °C';
+      
+      // ČAS PODAVAČE V SEKUNDÁCH (780s = 13min)
+      const totalSeconds = fields.field8;
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      document.getElementById('field8').innerHTML = totalSeconds.toLocaleString() + ' s<br><small>' + hours + 'h ' + minutes + 'm</small>';
+
+      updateCalculations();
     }
 
     function updateCalculations() {
       const pricePerKg = parseFloat(document.getElementById('pricePerKg').value) || 0;
       const feedRate10min = parseFloat(document.getElementById('feedRate10min').value) || 0;
       
-      // Spotřeba: 144 intervalů po 10min za 24h
-      const cons24h = (feedRate10min * 144);
+      const cons24h = feedRate10min * 144; // 24h × 6 (10min)
       const consMonth = cons24h * 30;
-      
       const costDay = cons24h * pricePerKg;
       const costMonth = consMonth * pricePerKg;
       
@@ -301,39 +294,35 @@
       
       // Výkon kotle
       const boilerTemp = parseFloat(document.getElementById('field5').textContent) || 0;
-      const deltaT = boilerTemp - 40;
-      const power = Math.min(Math.max(deltaT * 0.8, 0), 25);
+      const power = Math.min(Math.max((boilerTemp - 40) * 0.8, 0), 25);
       document.getElementById('currentPower').textContent = power.toFixed(1) + ' kW';
     }
 
-    function formatSeconds(seconds) {
-      const hours = Math.floor(seconds / 3600);
-      const mins = Math.floor((seconds % 3600) / 60);
-      return `${hours}h ${mins}m (${seconds.toLocaleString()} s)`;
-    }
-
-    // Manuální zadání hodnot
-    window.loadManualValues = function() {
-      document.getElementById('field1').textContent = document.getElementById('manual1').value + ' °C';
-      document.getElementById('field2').textContent = document.getElementById('manual2').value + ' °C';
-      document.getElementById('field3').textContent = document.getElementById('manual3').value + ' °C';
-      document.getElementById('field4').textContent = document.getElementById('manual4').value + ' °C';
-      document.getElementById('field5').textContent = document.getElementById('manual5').value + ' °C';
-      
-      const secs = parseInt(document.getElementById('manual8').value) || 0;
-      document.getElementById('field8').innerHTML = secs.toLocaleString() + ' s<br><small>' + formatSeconds(secs) + '</small>';
-      
-      updateCalculations();
+    function initChart() {
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: Array.from({length: 24}, (_, i) => `${i+1}h`),
+          datasets: [{
+            label: 'Podávací rychlost (kg/h)',
+            data: [1.8,2.2,2.5,2.1,1.9,2.3,2.0,1.7,2.4,2.8,2.1,1.9,2.2,2.6,2.3,2.0,1.8,2.1,2.4,2.7,2.2,1.9,2.0,2.3],
+            borderColor: '#d32f2f',
+            backgroundColor: 'rgba(211, 47, 47, 0.1)',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true } }
+        }
+      });
     }
 
     function updateClock() {
       document.getElementById('dateTime').textContent = new Date().toLocaleDateString('cs-CZ', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
       });
     }
 
@@ -341,12 +330,14 @@
     document.getElementById('pricePerKg').addEventListener('input', updateCalculations);
     document.getElementById('feedRate10min').addEventListener('input', updateCalculations);
 
-    // Inicializace
+    // START
     initChart();
     updateClock();
-    loadManualValues(); // Načte výchozí hodnoty
-
+    fetchPublicData(); // Načte REÁLNÁ data z channelu 231269
+    
+    // Auto update každých 30s
     setInterval(updateClock, 1000);
+    setInterval(fetchPublicData, 30000);
   </script>
 </body>
 </html>
