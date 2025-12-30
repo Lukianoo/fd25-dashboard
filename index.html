@@ -174,7 +174,7 @@ async function update(){
   const daySec=resetDaily(totalSec);
   const dayKg=secToKg(daySec);
   kgDay.textContent=dayKg.toFixed(2)+" kg";
-  costDay.textContent=(dayKg*(+priceKg.value||15.5)).toFixed(0)+" Kč";
+  costDay.textContent=(dayKg*(+priceKg.value||6.20)).toFixed(0)+" Kč";
 
   // MĚSÍC
   const m=await fetchFeeds("days=30&results=8000");
