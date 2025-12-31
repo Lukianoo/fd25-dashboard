@@ -9,8 +9,8 @@
 *{box-sizing:border-box}
 body{
   margin:0;
-  font-family:Segoe UI,system-ui;
-  background:linear-gradient(135deg,#1e3c72,#2a5298);
+  font-family:Segoe UI,system-ui,-apple-system;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
   color:#222;
 }
 
@@ -21,81 +21,107 @@ header{
   padding:12px 20px;
   display:flex;
   align-items:center;
-  justify-content:space-between;
-  box-shadow:0 4px 15px rgba(0,0,0,.4);
+  gap:20px;
+  box-shadow:0 5px 25px rgba(0,0,0,.6);
 }
-.header-left{
-  display:flex;
-  align-items:center;
-  gap:15px;
+header img{
+  height:46px;
+  filter:drop-shadow(0 3px 6px rgba(0,0,0,.6));
 }
-.logo{
-  height:42px;
-  width:auto;
-}
-.title{
+header .title{
   font-size:18px;
   font-weight:600;
+  letter-spacing:.5px;
 }
+header .spacer{flex:1}
 header button{
-  background:#1e3c72;
+  background:#1e88e5;
   color:#fff;
   border:none;
-  border-radius:8px;
+  border-radius:10px;
   padding:8px 14px;
   font-size:14px;
   cursor:pointer;
 }
 
 /* ===== MAIN ===== */
-main{max-width:1400px;margin:auto;padding:20px}
+main{max-width:1450px;margin:auto;padding:22px}
+
 .grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:20px;
+  gap:22px;
 }
+
+/* ===== CARDS ===== */
 .card{
-  background:#fff;
-  border-radius:16px;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(6px);
+  border-radius:18px;
   padding:20px;
-  box-shadow:0 10px 30px rgba(0,0,0,.25);
+  box-shadow:0 15px 35px rgba(0,0,0,.35);
+  transition:.25s;
 }
-h2{margin:0 0 10px;font-size:15px;color:#1e3c72}
-.value{font-size:32px;font-weight:700;color:#d32f2f}
+.card:hover{transform:translateY(-4px)}
+
+h2{
+  margin:0 0 12px;
+  font-size:15px;
+  color:#1e3c72;
+  letter-spacing:.3px
+}
+.value{
+  font-size:34px;
+  font-weight:700;
+  color:#d32f2f;
+}
 .sub{font-size:13px;color:#555}
+
 .green{color:#2e7d32}
 .blue{color:#1565c0}
 .orange{color:#ef6c00}
 
-input{width:100%;padding:10px;font-size:15px}
-.settings{display:grid;grid-template-columns:1fr 1fr;gap:15px}
-button{
-  padding:12px 18px;
+/* ===== INPUTS ===== */
+input{
+  width:100%;
+  padding:10px;
   font-size:15px;
   border-radius:10px;
+  border:1px solid #ccc;
+}
+.settings{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px
+}
+button{
+  padding:12px 20px;
+  font-size:15px;
+  border-radius:12px;
   border:none;
   background:#1e3c72;
   color:#fff;
   cursor:pointer;
 }
 
+/* ===== TABLE ===== */
 table{width:100%;border-collapse:collapse}
-th,td{padding:8px;text-align:center}
-th{background:#eee}
+th,td{padding:10px;text-align:center}
+th{
+  background:#1e3c72;
+  color:#fff;
+}
+tr:nth-child(even){background:#f4f6f8}
 </style>
 </head>
 
 <body>
 
 <header>
-  <div class="header-left">
-    <!-- 🔴 DOPLŇ RAW URL LOGA Z GITHUBU -->
-    <img src="https://github.com/Lukianoo/fd25-dashboard/blob/main/logo-elektroservis.png">
-    <div class="title">Attack FD 25 – Profi panel</div>
-  </div>
-
+  <img src="https://raw.githubusercontent.com/Lukianoo/fd25-dashboard/main/logo-elektroservis.png" alt="Elektroservis logo">
+  <div class="title">Attack FD 25 – Profi dashboard</div>
+  <div class="spacer"></div>
   <div id="clock"></div>
-
   <button id="fsBtn">⛶ Fullscreen</button>
 </header>
 
@@ -123,67 +149,50 @@ th{background:#eee}
   <div><div class="sub">CENA DNES</div><div class="value" id="costDay">0 Kč</div></div>
   <div><div class="sub">CENA MĚSÍC</div><div class="value" id="costMonth">0 Kč</div></div>
 </div>
+
+<br>
 <button id="historyBtn">📅 Denní historie spotřeby</button>
+</div>
+
+<div id="historyBox" class="card" style="display:none;margin-top:22px">
+<h2>📊 Denní historie – uhlí & cena</h2>
+<table>
+<thead>
+<tr><th>Datum</th><th>Spotřeba (kg)</th><th>Cena (Kč)</th></tr>
+</thead>
+<tbody id="historyTable"></tbody>
+</table>
+</div>
+
+<br>
+
+<div class="card">
+<h2>⚙️ Nastavení</h2>
+<div class="settings">
+  <div>
+    <label>Kg uhlí / 10 min</label>
+    <input type="number" id="kg10min" step="0.1">
+  </div>
+  <div>
+    <label>Cena / kg</label>
+    <input type="number" id="priceKg" step="0.1">
+  </div>
+</div>
 </div>
 
 </main>
 
 <script>
-const CHANNEL = 231269;
-const ENERGY = 4.8;
-const EFF = 0.75;
+const CHANNEL=231269,ENERGY=4.8,EFF=0.75;
+kg10min.value=localStorage.kg10min||2.5;
+priceKg.value=localStorage.priceKg||6.2;
 
-kg10min.value = localStorage.kg10min || 2.5;
-priceKg.value = localStorage.priceKg || 6.2;
+clock.textContent=new Date().toLocaleString("cs-CZ");
+setInterval(()=>clock.textContent=new Date().toLocaleString("cs-CZ"),1000);
 
-function updateClock(){
-  clock.textContent = new Date().toLocaleString("cs-CZ");
-}
-
-/* FULLSCREEN */
-fsBtn.onclick=()=>{
-  if(!document.fullscreenElement){
-    document.documentElement.requestFullscreen();
-  }else{
-    document.exitFullscreen();
-  }
-};
-document.addEventListener("fullscreenchange",()=>{
-  fsBtn.textContent=document.fullscreenElement?"⛶ Ukončit":"⛶ Fullscreen";
-});
-
-/* FORMAT */
-function secToHMS(sec){
-  sec=Math.max(0,Math.floor(sec));
-  const h=Math.floor(sec/3600);
-  const m=Math.floor((sec%3600)/60);
-  const s=sec%60;
-  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
-}
-function secToKg(sec){
-  return Math.max(0,(sec/600)*(+kg10min.value||2.5));
-}
-
-async function fetchFeeds(p){
-  try{
-    const r=await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${p}`);
-    return (await r.json()).feeds||[];
-  }catch{return[]}
-}
-
-async function updateCurrent(){
-  const f=(await fetchFeeds("results=1"))[0];
-  if(!f)return;
-  const tK=+f.field5||0,tZ=+f.field1||0;
-  tKotel.textContent=tK.toFixed(1)+" °C";
-  tZpet.textContent=tZ.toFixed(1)+" °C";
-  deltaT.textContent=(tK-tZ).toFixed(1)+" °C";
-  feedTotal.textContent=secToHMS(+f.field8||0);
-}
-
-updateClock();updateCurrent();
-setInterval(updateClock,1000);
-setInterval(updateCurrent,30000);
+fsBtn.onclick=()=>!document.fullscreenElement
+?document.documentElement.requestFullscreen()
+:document.exitFullscreen();
 </script>
 
 </body>
