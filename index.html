@@ -135,6 +135,15 @@ function updateClock(){
   clock.textContent = new Date().toLocaleString("cs-CZ");
 }
 
+/* ===== FORMAT SEKUND NA HH:MM:SS ===== */
+function secToHMS(sec){
+  sec = Math.max(0, Math.floor(sec));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+
 function secToKg(sec){
   return Math.max(0,(sec/600)*(+kg10min.value||2.5));
 }
@@ -178,7 +187,9 @@ async function updateCurrent(){
   tVenku.textContent=(+f.field4||0).toFixed(1)+" °C";
 
   deltaT.textContent=(tK-tZ).toFixed(1)+" °C";
-  feedTotal.textContent=(+f.field8||0)+" s";
+
+  const totalSec = +f.field8 || 0;
+  feedTotal.textContent = secToHMS(totalSec);
 }
 
 async function updateHour(){
