@@ -13,24 +13,14 @@ body{
   background:linear-gradient(135deg,#1e3c72,#2a5298);
   color:#222;
 }
-
-/* ===== HEADER ===== */
 header{
   background:#000;
   color:#fff;
-  padding:12px 20px;
+  padding:15px 20px;
   display:flex;
+  justify-content:space-between;
   align-items:center;
-  gap:15px;
 }
-header img{
-  height:42px;
-}
-header .title{
-  font-size:17px;
-  font-weight:600;
-}
-header .spacer{flex:1}
 header button{
   background:#1e3c72;
   color:#fff;
@@ -40,8 +30,6 @@ header button{
   font-size:14px;
   cursor:pointer;
 }
-
-/* ===== MAIN ===== */
 main{max-width:1400px;margin:auto;padding:20px}
 .grid{
   display:grid;
@@ -80,16 +68,13 @@ th{background:#eee}
 <body>
 
 <header>
-  <img src="https://raw.githubusercontent.com/Lukianoo/fd25-dashboard/main/logo-elektroservis.png">
-  <div class="title">Attack FD 25 – Profi panel</div>
-  <div class="spacer"></div>
   <div id="clock"></div>
+  <div>Attack FD 25 – Profi panel</div>
   <button id="fsBtn">⛶ Fullscreen</button>
 </header>
 
 <main>
 
-<!-- ===== KARTY ===== -->
 <div class="grid">
   <div class="card"><h2>🔥 Kotel</h2><div class="value" id="tKotel">--</div></div>
   <div class="card"><h2>↩️ Zpátečka</h2><div class="value blue" id="tZpet">--</div></div>
@@ -112,13 +97,145 @@ th{background:#eee}
   <div><div class="sub">CENA DNES</div><div class="value" id="costDay">0 Kč</div></div>
   <div><div class="sub">CENA MĚSÍC</div><div class="value" id="costMonth">0 Kč</div></div>
 </div>
+
+<br>
+<button id="historyBtn">📅 Denní historie spotřeby</button>
+</div>
+
+<div id="historyBox" class="card" style="display:none;margin-top:20px">
+  <h2>📊 Denní historie – uhlí & cena</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Datum</th>
+        <th>Spotřeba (kg)</th>
+        <th>Cena (Kč)</th>
+      </tr>
+    </thead>
+    <tbody id="historyTable"></tbody>
+  </table>
+</div>
+
+<br>
+
+<div class="card">
+<h2>⚙️ Nastavení</h2>
+<div class="settings">
+  <div>
+    <label>Kg uhlí / 10 min</label>
+    <input type="number" id="kg10min" step="0.1">
+  </div>
+  <div>
+    <label>Cena / kg</label>
+    <input type="number" id="priceKg" step="0.1">
+  </div>
+</div>
 </div>
 
 </main>
 
-<!-- ===== TVŮJ PŮVODNÍ SCRIPT – BEZE ZMĚNY ===== -->
 <script>
-/* celý tvůj původní JS přesně jak jsi ho poslal */
+const CHANNEL = 231269;
+const ENERGY = 4.8;
+const EFF = 0.75;
+
+kg10min.value = localStorage.kg10min || 2.5;
+priceKg.value = localStorage.priceKg || 6.2;
+
+function updateClock(){
+  clock.textContent = new Date().toLocaleString("cs-CZ");
+}
+
+/* ===== FULLSCREEN ===== */
+function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen();
+  }else{
+    document.exitFullscreen();
+  }
+}
+fsBtn.onclick = toggleFullscreen;
+
+document.addEventListener("fullscreenchange",()=>{
+  fsBtn.textContent = document.fullscreenElement
+    ? "⛶ Ukončit"
+    : "⛶ Fullscreen";
+});
+
+/* ===== FORMAT SEKUND ===== */
+function secToHMS(sec){
+  sec=Math.max(0,Math.floor(sec));
+  const h=Math.floor(sec/3600);
+  const m=Math.floor((sec%3600)/60);
+  const s=sec%60;
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+
+function secToKg(sec){
+  return Math.max(0,(sec/600)*(+kg10min.value||2.5));
+}
+
+function todayStartISO(){
+  const d=new Date();d.setHours(0,0,0,0);return d.toISOString();
+}
+function monthStartISO(){
+  const d=new Date();d.setDate(1);d.setHours(0,0,0,0);return d.toISOString();
+}
+
+async function fetchFeeds(p){
+  try{
+    const r=await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${p}`);
+    return (await r.json()).feeds||[];
+  }catch{ return []; }
+}
+
+async function updateCurrent(){
+  const f=(await fetchFeeds("results=1"))[0];
+  if(!f) return;
+
+  const tK=+f.field5||0, tZ=+f.field1||0;
+  tKotel.textContent=tK.toFixed(1)+" °C";
+  tZpet.textContent=tZ.toFixed(1)+" °C";
+  tPodavac.textContent=(+f.field2||0).toFixed(1)+" °C";
+  tBojler.textContent=(+f.field3||0).toFixed(1)+" °C";
+  tVenku.textContent=(+f.field4||0).toFixed(1)+" °C";
+  deltaT.textContent=(tK-tZ).toFixed(1)+" °C";
+  feedTotal.textContent=secToHMS(+f.field8||0);
+}
+
+async function updateHour(){
+  const feeds=await fetchFeeds("minutes=60&results=120");
+  if(feeds.length<2) return;
+  const kg=secToKg(feeds.at(-1).field8-feeds[0].field8);
+  kgHour.textContent=kg.toFixed(2)+" kg";
+  powerKWbig.textContent=(kg*ENERGY*EFF).toFixed(1)+" kWh";
+}
+
+async function updateDay(){
+  const feeds=await fetchFeeds("start="+todayStartISO());
+  if(feeds.length<2) return;
+  const kg=secToKg(feeds.at(-1).field8-feeds[0].field8);
+  kgDay.textContent=kg.toFixed(2)+" kg";
+  costDay.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
+}
+
+async function updateMonth(){
+  const feeds=await fetchFeeds("start="+monthStartISO());
+  if(feeds.length<2) return;
+  const kg=secToKg(feeds.at(-1).field8-feeds[0].field8);
+  kgMonth.textContent=kg.toFixed(0)+" kg";
+  costMonth.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
+}
+
+kg10min.oninput=()=>{localStorage.kg10min=kg10min.value;updateHour();updateDay();updateMonth();}
+priceKg.oninput=()=>{localStorage.priceKg=priceKg.value;updateDay();updateMonth();}
+
+updateClock();updateCurrent();updateHour();updateDay();updateMonth();
+setInterval(updateClock,1000);
+setInterval(updateCurrent,30000);
+setInterval(updateHour,300000);
+setInterval(updateDay,900000);
+setInterval(updateMonth,1800000);
 </script>
 
 </body>
