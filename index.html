@@ -32,19 +32,8 @@ main{max-width:1400px;margin:auto;padding:20px}
   padding:20px;
   box-shadow:0 10px 30px rgba(0,0,0,.25);
 }
-.card.center{text-align:center}
 h2{margin:0 0 10px;font-size:16px;color:#1e3c72}
-.value{
-  font-size:32px;
-  font-weight:700;
-  color:#d32f2f;
-}
-.value.big{
-  font-size:36px;
-  font-weight:800;
-}
-.value.power{color:#ef6c00}
-.value.delta{color:#1565c0}
+.value{font-size:32px;font-weight:700;color:#d32f2f}
 .sub{font-size:13px;color:#555}
 .green{color:#2e7d32}
 .blue{color:#1565c0}
@@ -63,31 +52,16 @@ input{width:100%;padding:10px;font-size:15px}
 
 <main>
 
-<!-- TEPLOTY -->
+<!-- TEPLOTY + VÝKON -->
 <div class="grid">
-  <div class="card center"><h2>🔥 Kotel</h2><div class="value big" id="tKotel">--</div></div>
-  <div class="card center"><h2>⚙️ Podavač</h2><div class="value big" id="tPodavac">--</div></div>
-  <div class="card center"><h2>💧 Bojler</h2><div class="value big" id="tBojler">--</div></div>
-  <div class="card center"><h2>↩️ Zpátečka</h2><div class="value big" id="tZpet">--</div></div>
-  <div class="card center"><h2>🌡️ Venku</h2><div class="value big" id="tVenku">--</div></div>
-  <div class="card center"><h2>⏱️ Podavač – celkem</h2><div class="value big" id="feedTotal">--</div></div>
-</div>
-
-<br>
-
-<!-- VÝKON + ΔT -->
-<div class="grid">
-  <div class="card center">
-    <h2>⚡ Aktuální výkon</h2>
-    <div class="value big power" id="powerKW">-- kW</div>
-    <div class="sub">z poslední hodiny</div>
-  </div>
-
-  <div class="card center">
-    <h2>🌡️ Teplotní spád ΔT</h2>
-    <div class="value big delta" id="deltaT">-- °C</div>
-    <div class="sub">Kotel – Zpátečka</div>
-  </div>
+  <div class="card"><h2>🔥 Kotel</h2><div class="value" id="tKotel">--</div></div>
+  <div class="card"><h2>↩️ Zpátečka</h2><div class="value blue" id="tZpet">--</div></div>
+  <div class="card"><h2>🌡️ Teplotní spád ΔT</h2><div class="value orange" id="deltaT">--</div></div>
+  <div class="card"><h2>⚡ Výkon</h2><div class="value green" id="powerKWbig">--</div></div>
+  <div class="card"><h2>⚙️ Podavač</h2><div class="value" id="tPodavac">--</div></div>
+  <div class="card"><h2>💧 Bojler</h2><div class="value" id="tBojler">--</div></div>
+  <div class="card"><h2>🌡️ Venku</h2><div class="value" id="tVenku">--</div></div>
+  <div class="card"><h2>⏱️ Podavač – celkem</h2><div class="value" id="feedTotal">--</div></div>
 </div>
 
 <br>
@@ -179,18 +153,19 @@ async function update(){
   if(!cur.length) return;
   const f=cur[0];
 
-  tKotel.textContent=(+f.field5||0).toFixed(1)+" °C";
+  const tK = +f.field5||0;
+  const tZ = +f.field1||0;
+
+  tKotel.textContent = tK.toFixed(1)+" °C";
   tPodavac.textContent=(+f.field2||0).toFixed(1)+" °C";
   tBojler.textContent=(+f.field3||0).toFixed(1)+" °C";
-  tZpet.textContent=(+f.field1||0).toFixed(1)+" °C";
+  tZpet.textContent  = tZ.toFixed(1)+" °C";
   tVenku.textContent=(+f.field4||0).toFixed(1)+" °C";
+
+  deltaT.textContent = (tK - tZ).toFixed(1)+" °C";
 
   const totalSec=+f.field8||0;
   feedTotal.textContent=totalSec+" s";
-
-  // ΔT
-  const delta=(+f.field5||0)-(+f.field1||0);
-  deltaT.textContent=delta.toFixed(1)+" °C";
 
   // HODINA
   const hourFeeds=await fetchFeeds("minutes=60&results=200");
@@ -198,21 +173,21 @@ async function update(){
     const hSec=hourFeeds.at(-1).field8-hourFeeds[0].field8;
     const hKg=secToKg(hSec);
     kgHour.textContent=hKg.toFixed(2)+" kg";
-    powerKW.textContent=(hKg*ENERGY*EFF).toFixed(1)+" kW";
+    powerKWbig.textContent=(hKg*ENERGY*EFF).toFixed(1)+" kW";
   }
 
   // DEN
   const daySec=resetDaily(totalSec);
   const dayKg=secToKg(daySec);
   kgDay.textContent=dayKg.toFixed(2)+" kg";
-  costDay.textContent=(dayKg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
+  costDay.textContent=(dayKg*(+priceKg.value||15.5)).toFixed(0)+" Kč";
 
   // MĚSÍC
   const m=await fetchFeeds("days=30&results=8000");
   if(m.length>1){
     const mKg=secToKg(m.at(-1).field8-m[0].field8);
     kgMonth.textContent=mKg.toFixed(0)+" kg";
-    costMonth.textContent=(mKg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
+    costMonth.textContent=(mKg*(+priceKg.value||15.5)).toFixed(0)+" Kč";
   }
 }
 
