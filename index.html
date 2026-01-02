@@ -164,24 +164,29 @@ function secToKg(sec){
   return Math.max(0,(sec/600)*(+kg10min.value||2.5));
 }
 
-// ISO dates
-function todayStartISO(){
-  const d = new Date();
-  d.setHours(0,0,0,0);
-  return d.toISOString();
+// Get start and end for today/month in UTC
+function todayStartEnd(){
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(start);
+  end.setDate(end.getDate()+1);
+  return {start: start.toISOString(), end: end.toISOString()};
 }
-function monthStartISO(){
-  const d = new Date();
-  d.setDate(1);
-  d.setHours(0,0,0,0);
-  return d.toISOString();
+
+function monthStartEnd(){
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(start);
+  end.setMonth(end.getMonth()+1);
+  return {start: start.toISOString(), end: end.toISOString()};
 }
 
 // Fetch feeds
-async function fetchFeeds(p){
+async function fetchFeeds(params){
   try{
-    const r = await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${p}`);
-    return (await r.json()).feeds || [];
+    const r = await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${params}`);
+    const data = await r.json();
+    return data.feeds || [];
   }catch{
     return [];
   }
@@ -206,23 +211,31 @@ async function updateCurrent(){
 async function updateHour(){
   const feeds = await fetchFeeds("minutes=60&results=120");
   if(feeds.length<2) return;
-  const kg = secToKg(feeds[feeds.length-1].field8 - feeds[0].field8);
+  const sec1 = +(feeds[0].field8||0);
+  const sec2 = +(feeds[feeds.length-1].field8||0);
+  const kg = secToKg(sec2 - sec1);
   kgHour.textContent = kg.toFixed(2) + " kg";
   powerKWbig.textContent = (kg*ENERGY*EFF).toFixed(1) + " kWh";
 }
 
 async function updateDay(){
-  const feeds = await fetchFeeds("start=" + todayStartISO());
+  const {start, end} = todayStartEnd();
+  const feeds = await fetchFeeds(`start=${start}&end=${end}`);
   if(feeds.length<2) return;
-  const kg = secToKg(feeds[feeds.length-1].field8 - feeds[0].field8);
+  const sec1 = +(feeds[0].field8||0);
+  const sec2 = +(feeds[feeds.length-1].field8||0);
+  const kg = secToKg(sec2 - sec1);
   kgDay.textContent = kg.toFixed(2) + " kg";
   costDay.textContent = (kg*(+priceKg.value||6.2)).toFixed(0) + " Kč";
 }
 
 async function updateMonth(){
-  const feeds = await fetchFeeds("start=" + monthStartISO());
+  const {start, end} = monthStartEnd();
+  const feeds = await fetchFeeds(`start=${start}&end=${end}`);
   if(feeds.length<2) return;
-  const kg = secToKg(feeds[feeds.length-1].field8 - feeds[0].field8);
+  const sec1 = +(feeds[0].field8||0);
+  const sec2 = +(feeds[feeds.length-1].field8||0);
+  const kg = secToKg(sec2 - sec1);
   kgMonth.textContent = kg.toFixed(0) + " kg";
   costMonth.textContent = (kg*(+priceKg.value||6.2)).toFixed(0) + " Kč";
 }
