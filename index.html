@@ -6,32 +6,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 *{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:Segoe UI,system-ui;
-  background:linear-gradient(135deg,#1e3c72,#2a5298);
-  color:#222;
-}
-header{
-  background:#000;
-  color:#fff;
-  padding:15px 20px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-header button{
-  background:#1e3c72;
-  color:#fff;
-  border:none;
-  border-radius:8px;
-  padding:8px 12px;
-  font-size:14px;
-  cursor:pointer;
-}
+body{margin:0;font-family:Segoe UI,system-ui;background:linear-gradient(135deg,#1e3c72,#2a5298);color:#222}
+header{background:#000;color:#fff;padding:15px 20px;display:flex;justify-content:space-between;align-items:center}
+header button{background:#1e3c72;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:14px;cursor:pointer}
 main{max-width:1400px;margin:auto;padding:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px}
-.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25);}
+.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
 h2{margin:0 0 10px;font-size:16px;color:#1e3c72}
 .value{font-size:32px;font-weight:700;color:#d32f2f}
 .sub{font-size:13px;color:#555}
@@ -133,53 +113,19 @@ kg10min.value = localStorage.kg10min || 2.5;
 priceKg.value = localStorage.priceKg || 6.2;
 
 // Clock
-function updateClock(){
-  clock.textContent = new Date().toLocaleString("cs-CZ");
-}
+function updateClock(){ clock.textContent = new Date().toLocaleString("cs-CZ"); }
 
 // Fullscreen
-function toggleFullscreen(){
-  if(!document.fullscreenElement){
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
+function toggleFullscreen(){ 
+  if(!document.fullscreenElement){ document.documentElement.requestFullscreen(); } 
+  else { document.exitFullscreen(); } 
 }
 fsBtn.onclick = toggleFullscreen;
-document.addEventListener("fullscreenchange", () => {
-  fsBtn.textContent = document.fullscreenElement ? "⛶ Ukončit" : "⛶ Fullscreen";
-});
+document.addEventListener("fullscreenchange", ()=>{ fsBtn.textContent = document.fullscreenElement ? "⛶ Ukončit" : "⛶ Fullscreen"; });
 
 // Format seconds to hh:mm:ss
-function secToHMS(sec){
-  sec = Math.max(0, Math.floor(sec));
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
-}
-
-// Convert seconds to kg
-function secToKg(sec){
-  return Math.max(0,(sec/600)*(+kg10min.value||2.5));
-}
-
-// Start/end for Thingspeak
-function todayStartEnd(){
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end = new Date(start);
-  end.setDate(end.getDate()+1);
-  return {start: start.toISOString(), end: end.toISOString()};
-}
-
-function monthStartEnd(){
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(start);
-  end.setMonth(end.getMonth()+1);
-  return {start: start.toISOString(), end: end.toISOString()};
-}
+function secToHMS(sec){ sec=Math.max(0,Math.floor(sec)); const h=Math.floor(sec/3600); const m=Math.floor((sec%3600)/60); const s=sec%60; return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`; }
+function secToKg(sec){ return Math.max(0,(sec/600)*(+kg10min.value||2.5)); }
 
 // Fetch feeds
 async function fetchFeeds(params){
@@ -187,30 +133,27 @@ async function fetchFeeds(params){
     const r = await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${params}`);
     const data = await r.json();
     return data.feeds || [];
-  }catch{
-    return [];
-  }
+  }catch{ return []; }
 }
 
 // Update functions
 async function updateCurrent(){
   const feeds = await fetchFeeds("results=1");
+  if(feeds.length === 0) return;
   const f = feeds[0];
-  if(!f) return;
-  const tK = +f.field5 || 0;
-  const tZ = +f.field1 || 0;
-  tKotel.textContent = tK.toFixed(1) + " °C";
-  tZpet.textContent = tZ.toFixed(1) + " °C";
+  tKotel.textContent = (+f.field5||0).toFixed(1) + " °C";
+  tZpet.textContent = (+f.field1||0).toFixed(1) + " °C";
   tPodavac.textContent = (+f.field2||0).toFixed(1) + " °C";
   tBojler.textContent = (+f.field3||0).toFixed(1) + " °C";
   tVenku.textContent = (+f.field4||0).toFixed(1) + " °C";
-  deltaT.textContent = (tK - tZ).toFixed(1) + " °C";
+  deltaT.textContent = ((+f.field5||0) - (+f.field1||0)).toFixed(1) + " °C";
   feedTotal.textContent = secToHMS(+f.field8||0);
 }
 
+// Hourly
 async function updateHour(){
-  const feeds = await fetchFeeds("minutes=60&results=120");
-  if(feeds.length<1) return;
+  const feeds = await fetchFeeds("results=2");
+  if(feeds.length === 0) return;
   const sec1 = +(feeds[0].field8||0);
   const sec2 = +(feeds[feeds.length-1].field8||0);
   const kg = secToKg(sec2 - sec1);
@@ -218,55 +161,32 @@ async function updateHour(){
   powerKWbig.textContent = (kg*ENERGY*EFF).toFixed(1) + " kWh";
 }
 
+// Daily
 async function updateDay(){
-  const {start, end} = todayStartEnd();
-  const feeds = await fetchFeeds(`start=${start}&end=${end}`);
+  const feeds = await fetchFeeds("results=2");
   let kg = 0;
-  if(feeds.length >= 2){
-    const sec1 = +(feeds[0].field8||0);
-    const sec2 = +(feeds[feeds.length-1].field8||0);
-    kg = secToKg(sec2 - sec1);
-  } else if(feeds.length === 1){
-    kg = secToKg(+(feeds[0].field8||0));
-  }
+  if(feeds.length >= 2){ kg = secToKg(+(feeds[1].field8||0) - +(feeds[0].field8||0)); }
+  else if(feeds.length === 1){ kg = secToKg(+(feeds[0].field8||0)); }
   kgDay.textContent = kg.toFixed(2) + " kg";
   costDay.textContent = (kg*(+priceKg.value||6.2)).toFixed(0) + " Kč";
 }
 
+// Monthly
 async function updateMonth(){
-  const {start, end} = monthStartEnd();
-  const feeds = await fetchFeeds(`start=${start}&end=${end}`);
+  const feeds = await fetchFeeds("results=2");
   let kg = 0;
-  if(feeds.length >= 2){
-    const sec1 = +(feeds[0].field8||0);
-    const sec2 = +(feeds[feeds.length-1].field8||0);
-    kg = secToKg(sec2 - sec1);
-  } else if(feeds.length === 1){
-    kg = secToKg(+(feeds[0].field8||0));
-  }
+  if(feeds.length >= 2){ kg = secToKg(+(feeds[1].field8||0) - +(feeds[0].field8||0)); }
+  else if(feeds.length === 1){ kg = secToKg(+(feeds[0].field8||0)); }
   kgMonth.textContent = kg.toFixed(0) + " kg";
   costMonth.textContent = (kg*(+priceKg.value||6.2)).toFixed(0) + " Kč";
 }
 
 // Input handlers
-kg10min.oninput = ()=>{
-  localStorage.kg10min = kg10min.value;
-  updateHour();
-  updateDay();
-  updateMonth();
-}
-priceKg.oninput = ()=>{
-  localStorage.priceKg = priceKg.value;
-  updateDay();
-  updateMonth();
-}
+kg10min.oninput = ()=>{ localStorage.kg10min=kg10min.value; updateHour(); updateDay(); updateMonth(); }
+priceKg.oninput = ()=>{ localStorage.priceKg=priceKg.value; updateDay(); updateMonth(); }
 
 // Initial update
-updateClock();
-updateCurrent();
-updateHour();
-updateDay();
-updateMonth();
+updateClock(); updateCurrent(); updateHour(); updateDay(); updateMonth();
 
 // Intervals
 setInterval(updateClock,1000);
