@@ -33,57 +33,46 @@ th{background:#eee}
   <button id="fsBtn">⛶ Fullscreen</button>
 </header>
 <main>
+<div class="grid">
+  <div class="card"><h2>🔥 Kotel</h2><div class="value" id="tKotel">--</div></div>
+  <div class="card"><h2>↩️ Zpátečka</h2><div class="value blue" id="tZpet">--</div></div>
+  <div class="card"><h2>🌡️ ΔT</h2><div class="value orange" id="deltaT">--</div></div>
+  <div class="card"><h2>⚡ Energie (1 h)</h2><div class="value green" id="powerKWbig">--</div></div>
+  <div class="card"><h2>⚙️ Podavač</h2><div class="value" id="tPodavac">--</div></div>
+  <div class="card"><h2>💧 Bojler</h2><div class="value" id="tBojler">--</div></div>
+  <div class="card"><h2>🌡️ Venku</h2><div class="value" id="tVenku">--</div></div>
+  <div class="card"><h2>⏱️ Podavač celkem</h2><div class="value" id="feedTotal">--</div></div>
+</div>
+
+<br>
+<div class="card">
+  <h2>💰 Spotřeba uhlí</h2>
   <div class="grid">
-    <div class="card"><h2>🔥 Kotel</h2><div class="value" id="tKotel">--</div></div>
-    <div class="card"><h2>↩️ Zpátečka</h2><div class="value blue" id="tZpet">--</div></div>
-    <div class="card"><h2>🌡️ ΔT</h2><div class="value orange" id="deltaT">--</div></div>
-    <div class="card"><h2>⚡ Energie (1 h)</h2><div class="value green" id="powerKWbig">--</div></div>
-    <div class="card"><h2>⚙️ Podavač</h2><div class="value" id="tPodavac">--</div></div>
-    <div class="card"><h2>💧 Bojler</h2><div class="value" id="tBojler">--</div></div>
-    <div class="card"><h2>🌡️ Venku</h2><div class="value" id="tVenku">--</div></div>
-    <div class="card"><h2>⏱️ Podavač celkem</h2><div class="value" id="feedTotal">--</div></div>
+    <div><div class="sub">HODINA</div><div class="value orange" id="kgHour">0 kg</div></div>
+    <div><div class="sub">DNES</div><div class="value green" id="kgDay">0 kg</div></div>
+    <div><div class="sub">MĚSÍC</div><div class="value blue" id="kgMonth">0 kg</div></div>
+    <div><div class="sub">CENA DNES</div><div class="value" id="costDay">0 Kč</div></div>
+    <div><div class="sub">CENA MĚSÍC</div><div class="value" id="costMonth">0 Kč</div></div>
   </div>
-  <br>
-  <div class="card">
-    <h2>💰 Spotřeba uhlí</h2>
-    <div class="grid">
-      <div><div class="sub">HODINA</div><div class="value orange" id="kgHour">0 kg</div></div>
-      <div><div class="sub">DNES</div><div class="value green" id="kgDay">0 kg</div></div>
-      <div><div class="sub">MĚSÍC</div><div class="value blue" id="kgMonth">0 kg</div></div>
-      <div><div class="sub">CENA DNES</div><div class="value" id="costDay">0 Kč</div></div>
-      <div><div class="sub">CENA MĚSÍC</div><div class="value" id="costMonth">0 Kč</div></div>
+</div>
+
+<br>
+<div class="card">
+  <h2>⚙️ Nastavení</h2>
+  <div class="settings">
+    <div>
+      <label>Kg uhlí / 10 min</label>
+      <input type="number" id="kg10min" step="0.1">
     </div>
-    <br>
-    <button id="historyBtn">📅 Denní historie spotřeby</button>
-  </div>
-  <div id="historyBox" class="card" style="display:none;margin-top:20px">
-    <h2>📊 Denní historie – uhlí & cena</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Datum</th>
-          <th>Spotřeba (kg)</th>
-          <th>Cena (Kč)</th>
-        </tr>
-      </thead>
-      <tbody id="historyTable"></tbody>
-    </table>
-  </div>
-  <br>
-  <div class="card">
-    <h2>⚙️ Nastavení</h2>
-    <div class="settings">
-      <div>
-        <label>Kg uhlí / 10 min</label>
-        <input type="number" id="kg10min" step="0.1">
-      </div>
-      <div>
-        <label>Cena / kg</label>
-        <input type="number" id="priceKg" step="0.1">
-      </div>
+    <div>
+      <label>Cena / kg</label>
+      <input type="number" id="priceKg" step="0.1">
     </div>
   </div>
+</div>
+
 </main>
+
 <script>
 const CHANNEL = 231269;
 const ENERGY = 4.8;
@@ -123,11 +112,11 @@ function toggleFullscreen(){
 fsBtn.onclick = toggleFullscreen;
 document.addEventListener("fullscreenchange", ()=>{ fsBtn.textContent = document.fullscreenElement ? "⛶ Ukončit" : "⛶ Fullscreen"; });
 
-// Format seconds to hh:mm:ss
+// Convert seconds to hh:mm:ss
 function secToHMS(sec){ sec=Math.max(0,Math.floor(sec)); const h=Math.floor(sec/3600); const m=Math.floor((sec%3600)/60); const s=sec%60; return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`; }
 function secToKg(sec){ return Math.max(0,(sec/600)*(+kg10min.value||2.5)); }
 
-// Fetch feeds
+// Fetch feeds helper
 async function fetchFeeds(params){
   try{
     const r = await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${params}`);
@@ -136,49 +125,52 @@ async function fetchFeeds(params){
   }catch{ return []; }
 }
 
-// Update functions
+// Update current values
 async function updateCurrent(){
   const feeds = await fetchFeeds("results=1");
-  if(feeds.length === 0) return;
+  if(feeds.length===0) return;
   const f = feeds[0];
   tKotel.textContent = (+f.field5||0).toFixed(1) + " °C";
   tZpet.textContent = (+f.field1||0).toFixed(1) + " °C";
   tPodavac.textContent = (+f.field2||0).toFixed(1) + " °C";
   tBojler.textContent = (+f.field3||0).toFixed(1) + " °C";
   tVenku.textContent = (+f.field4||0).toFixed(1) + " °C";
-  deltaT.textContent = ((+f.field5||0) - (+f.field1||0)).toFixed(1) + " °C";
+  deltaT.textContent = ((+f.field5||0)-(+f.field1||0)).toFixed(1) + " °C";
   feedTotal.textContent = secToHMS(+f.field8||0);
 }
 
-// Hourly
+// Hourly consumption
 async function updateHour(){
+  // poslední 2 feedy pro hodinu
   const feeds = await fetchFeeds("results=2");
-  if(feeds.length === 0) return;
+  if(feeds.length===0){ kgHour.textContent="0 kg"; powerKWbig.textContent="0 kWh"; return; }
   const sec1 = +(feeds[0].field8||0);
   const sec2 = +(feeds[feeds.length-1].field8||0);
-  const kg = secToKg(sec2 - sec1);
-  kgHour.textContent = kg.toFixed(2) + " kg";
-  powerKWbig.textContent = (kg*ENERGY*EFF).toFixed(1) + " kWh";
+  const kg = secToKg(sec2-sec1);
+  kgHour.textContent = kg.toFixed(2)+" kg";
+  powerKWbig.textContent = (kg*ENERGY*EFF).toFixed(1)+" kWh";
 }
 
-// Daily
+// Daily consumption
 async function updateDay(){
-  const feeds = await fetchFeeds("results=2");
-  let kg = 0;
-  if(feeds.length >= 2){ kg = secToKg(+(feeds[1].field8||0) - +(feeds[0].field8||0)); }
-  else if(feeds.length === 1){ kg = secToKg(+(feeds[0].field8||0)); }
-  kgDay.textContent = kg.toFixed(2) + " kg";
-  costDay.textContent = (kg*(+priceKg.value||6.2)).toFixed(0) + " Kč";
+  const feeds = await fetchFeeds("results=100"); // posledních 100 feedů
+  if(feeds.length===0){ kgDay.textContent="0 kg"; costDay.textContent="0 Kč"; return; }
+  const secStart = +(feeds[0].field8||0);
+  const secEnd = +(feeds[feeds.length-1].field8||0);
+  const kg = secToKg(secEnd-secStart);
+  kgDay.textContent = kg.toFixed(2)+" kg";
+  costDay.textContent = (kg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
 }
 
-// Monthly
+// Monthly consumption
 async function updateMonth(){
-  const feeds = await fetchFeeds("results=2");
-  let kg = 0;
-  if(feeds.length >= 2){ kg = secToKg(+(feeds[1].field8||0) - +(feeds[0].field8||0)); }
-  else if(feeds.length === 1){ kg = secToKg(+(feeds[0].field8||0)); }
-  kgMonth.textContent = kg.toFixed(0) + " kg";
-  costMonth.textContent = (kg*(+priceKg.value||6.2)).toFixed(0) + " Kč";
+  const feeds = await fetchFeeds("results=1000"); // posledních 1000 feedů
+  if(feeds.length===0){ kgMonth.textContent="0 kg"; costMonth.textContent="0 Kč"; return; }
+  const secStart = +(feeds[0].field8||0);
+  const secEnd = +(feeds[feeds.length-1].field8||0);
+  const kg = secToKg(secEnd-secStart);
+  kgMonth.textContent = kg.toFixed(0)+" kg";
+  costMonth.textContent = (kg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
 }
 
 // Input handlers
