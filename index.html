@@ -164,7 +164,7 @@ function secToKg(sec){
   return Math.max(0,(sec/600)*(+kg10min.value||2.5));
 }
 
-// Get start and end for today/month in UTC
+// Start/end for Thingspeak
 function todayStartEnd(){
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -210,7 +210,7 @@ async function updateCurrent(){
 
 async function updateHour(){
   const feeds = await fetchFeeds("minutes=60&results=120");
-  if(feeds.length<2) return;
+  if(feeds.length<1) return;
   const sec1 = +(feeds[0].field8||0);
   const sec2 = +(feeds[feeds.length-1].field8||0);
   const kg = secToKg(sec2 - sec1);
@@ -221,10 +221,14 @@ async function updateHour(){
 async function updateDay(){
   const {start, end} = todayStartEnd();
   const feeds = await fetchFeeds(`start=${start}&end=${end}`);
-  if(feeds.length<2) return;
-  const sec1 = +(feeds[0].field8||0);
-  const sec2 = +(feeds[feeds.length-1].field8||0);
-  const kg = secToKg(sec2 - sec1);
+  let kg = 0;
+  if(feeds.length >= 2){
+    const sec1 = +(feeds[0].field8||0);
+    const sec2 = +(feeds[feeds.length-1].field8||0);
+    kg = secToKg(sec2 - sec1);
+  } else if(feeds.length === 1){
+    kg = secToKg(+(feeds[0].field8||0));
+  }
   kgDay.textContent = kg.toFixed(2) + " kg";
   costDay.textContent = (kg*(+priceKg.value||6.2)).toFixed(0) + " Kč";
 }
@@ -232,10 +236,14 @@ async function updateDay(){
 async function updateMonth(){
   const {start, end} = monthStartEnd();
   const feeds = await fetchFeeds(`start=${start}&end=${end}`);
-  if(feeds.length<2) return;
-  const sec1 = +(feeds[0].field8||0);
-  const sec2 = +(feeds[feeds.length-1].field8||0);
-  const kg = secToKg(sec2 - sec1);
+  let kg = 0;
+  if(feeds.length >= 2){
+    const sec1 = +(feeds[0].field8||0);
+    const sec2 = +(feeds[feeds.length-1].field8||0);
+    kg = secToKg(sec2 - sec1);
+  } else if(feeds.length === 1){
+    kg = secToKg(+(feeds[0].field8||0));
+  }
   kgMonth.textContent = kg.toFixed(0) + " kg";
   costMonth.textContent = (kg*(+priceKg.value||6.2)).toFixed(0) + " Kč";
 }
