@@ -125,7 +125,7 @@ th{background:#eee}
 
 <script>
 const CHANNEL = 231269;
-const ENERGY = 4.8; // kWh / kg
+const ENERGY = 4.8;
 const EFF = 0.75;
 
 kg10min.value = localStorage.kg10min || 2.5;
@@ -135,7 +135,6 @@ function updateClock(){
   clock.textContent = new Date().toLocaleString("cs-CZ");
 }
 
-/* ===== FORMAT SEKUND NA HH:MM:SS ===== */
 function secToHMS(sec){
   sec = Math.max(0, Math.floor(sec));
   const h = Math.floor(sec / 3600);
@@ -150,13 +149,6 @@ function secToKg(sec){
 
 function todayStartISO(){
   const d=new Date();
-  d.setHours(0,0,0,0);
-  return d.toISOString();
-}
-
-function monthStartISO(){
-  const d=new Date();
-  d.setDate(1);
   d.setHours(0,0,0,0);
   return d.toISOString();
 }
@@ -188,16 +180,15 @@ async function updateCurrent(){
 
   deltaT.textContent=(tK-tZ).toFixed(1)+" °C";
 
-  const totalSec = +f.field8 || 0;
-  feedTotal.textContent = secToHMS(totalSec);
+  feedTotal.textContent=secToHMS(+f.field8||0);
 }
 
 async function updateHour(){
-  const feeds=await fetchFeeds("minutes=60&results=120");
+  const feeds=await fetchFeeds("minutes=60");
   if(feeds.length<2) return;
 
   const kg=secToKg(
-    feeds.at(-1).field8 - feeds[0].field8
+    (+feeds.at(-1).field8||0)-(+feeds[0].field8||0)
   );
 
   kgHour.textContent=kg.toFixed(2)+" kg";
@@ -205,11 +196,11 @@ async function updateHour(){
 }
 
 async function updateDay(){
-  const feeds=await fetchFeeds("start="+todayStartISO()+"&results=2000");
+  const feeds=await fetchFeeds("start="+todayStartISO());
   if(feeds.length<2) return;
 
   const kg=secToKg(
-    feeds.at(-1).field8 - feeds[0].field8
+    (+feeds.at(-1).field8||0)-(+feeds[0].field8||0)
   );
 
   kgDay.textContent=kg.toFixed(2)+" kg";
@@ -217,26 +208,42 @@ async function updateDay(){
 }
 
 async function updateMonth(){
-  const feeds=await fetchFeeds("start="+monthStartISO()+"&results=3000");
-  if(feeds.length<2) return;
-
-  const kg=secToKg(
-    feeds.at(-1).field8 - feeds[0].field8
-  );
-
-  kgMonth.textContent=kg.toFixed(0)+" kg";
-  costMonth.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
-}
-
-historyBtn.onclick = async () => {
-  historyBox.style.display =
-    historyBox.style.display === "none" ? "block" : "none";
-
-  historyTable.innerHTML="";
-  const days=14;
+  let totalKg=0;
   const price=+priceKg.value||6.2;
+  const now=new Date();
+  const days=now.getDate();
 
   for(let i=0;i<days;i++){
+    const d1=new Date();
+    d1.setDate(d1.getDate()-i);
+    d1.setHours(0,0,0,0);
+
+    const d2=new Date(d1);
+    d2.setDate(d2.getDate()+1);
+
+    const feeds=await fetchFeeds(
+      `start=${d1.toISOString()}&end=${d2.toISOString()}`
+    );
+
+    if(feeds.length>1){
+      totalKg+=secToKg(
+        (+feeds.at(-1).field8||0)-(+feeds[0].field8||0)
+      );
+    }
+  }
+
+  kgMonth.textContent=totalKg.toFixed(1)+" kg";
+  costMonth.textContent=(totalKg*price).toFixed(0)+" Kč";
+}
+
+historyBtn.onclick=async()=>{
+  historyBox.style.display=
+    historyBox.style.display==="none"?"block":"none";
+
+  historyTable.innerHTML="";
+  const price=+priceKg.value||6.2;
+
+  for(let i=0;i<14;i++){
     const d1=new Date();
     d1.setDate(d1.getDate()-i);
     d1.setHours(0,0,0,0);
@@ -244,12 +251,12 @@ historyBtn.onclick = async () => {
     d2.setDate(d2.getDate()+1);
 
     const feeds=await fetchFeeds(
-      `start=${d1.toISOString()}&end=${d2.toISOString()}&results=2000`
+      `start=${d1.toISOString()}&end=${d2.toISOString()}`
     );
 
     if(feeds.length>1){
       const kg=secToKg(
-        feeds.at(-1).field8 - feeds[0].field8
+        (+feeds.at(-1).field8||0)-(+feeds[0].field8||0)
       );
 
       historyTable.innerHTML+=`
@@ -281,7 +288,7 @@ setInterval(updateClock,1000);
 setInterval(updateCurrent,30000);
 setInterval(updateHour,300000);
 setInterval(updateDay,900000);
-setInterval(updateMonth,1800000);
+setInterval(updateMonth,3600000);
 </script>
 
 </body>
