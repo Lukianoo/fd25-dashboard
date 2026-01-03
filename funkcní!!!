@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<title>Kotelna – Attack FD 25</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Segoe UI,system-ui;
+  background:linear-gradient(135deg,#1e3c72,#2a5298);
+  color:#222;
+}
+header{
+  background:#000;
+  color:#fff;
+  padding:15px 20px;
+  display:flex;
+  justify-content:space-between;
+}
+main{max-width:1400px;margin:auto;padding:20px}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:20px;
+}
+.card{
+  background:#fff;
+  border-radius:14px;
+  padding:20px;
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+h2{margin:0 0 10px;font-size:16px;color:#1e3c72}
+.value{font-size:32px;font-weight:700;color:#d32f2f}
+.sub{font-size:13px;color:#555}
+.green{color:#2e7d32}
+.blue{color:#1565c0}
+.orange{color:#ef6c00}
+input{width:100%;padding:10px;font-size:15px}
+.settings{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+button{
+  padding:12px 18px;
+  font-size:15px;
+  border-radius:10px;
+  border:none;
+  background:#1e3c72;
+  color:#fff;
+  cursor:pointer;
+}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;text-align:center}
+th{background:#eee}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div id="clock"></div>
+  <div>Attack FD 25 – Profi panel</div>
+</header>
+
+<main>
+
+<div class="grid">
+  <div class="card"><h2>🔥 Kotel</h2><div class="value" id="tKotel">--</div></div>
+  <div class="card"><h2>↩️ Zpátečka</h2><div class="value blue" id="tZpet">--</div></div>
+  <div class="card"><h2>🌡️ ΔT</h2><div class="value orange" id="deltaT">--</div></div>
+  <div class="card"><h2>⚡ Energie (1 h)</h2><div class="value green" id="powerKWbig">--</div></div>
+  <div class="card"><h2>⚙️ Podavač</h2><div class="value" id="tPodavac">--</div></div>
+  <div class="card"><h2>💧 Bojler</h2><div class="value" id="tBojler">--</div></div>
+  <div class="card"><h2>🌡️ Venku</h2><div class="value" id="tVenku">--</div></div>
+  <div class="card"><h2>⏱️ Podavač celkem</h2><div class="value" id="feedTotal">--</div></div>
+</div>
+
+<br>
+
+<div class="card">
+<h2>💰 Spotřeba uhlí</h2>
+<div class="grid">
+  <div><div class="sub">HODINA</div><div class="value orange" id="kgHour">0 kg</div></div>
+  <div><div class="sub">DNES</div><div class="value green" id="kgDay">0 kg</div></div>
+  <div><div class="sub">MĚSÍC</div><div class="value blue" id="kgMonth">0 kg</div></div>
+  <div><div class="sub">CENA DNES</div><div class="value" id="costDay">0 Kč</div></div>
+  <div><div class="sub">CENA MĚSÍC</div><div class="value" id="costMonth">0 Kč</div></div>
+</div>
+
+<br>
+<button id="historyBtn">📅 Denní historie spotřeby</button>
+</div>
+
+<div id="historyBox" class="card" style="display:none;margin-top:20px">
+  <h2>📊 Denní historie – uhlí & cena</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Datum</th>
+        <th>Spotřeba (kg)</th>
+        <th>Cena (Kč)</th>
+      </tr>
+    </thead>
+    <tbody id="historyTable"></tbody>
+  </table>
+</div>
+
+<br>
+
+<div class="card">
+<h2>⚙️ Nastavení</h2>
+<div class="settings">
+  <div>
+    <label>Kg uhlí / 10 min</label>
+    <input type="number" id="kg10min" step="0.1">
+  </div>
+  <div>
+    <label>Cena / kg</label>
+    <input type="number" id="priceKg" step="0.1">
+  </div>
+</div>
+</div>
+
+</main>
+
+<script>
+const CHANNEL = 231269;
+const ENERGY = 4.8; // kWh / kg
+const EFF = 0.75;
+
+kg10min.value = localStorage.kg10min || 2.5;
+priceKg.value = localStorage.priceKg || 6.2;
+
+function updateClock(){
+  clock.textContent = new Date().toLocaleString("cs-CZ");
+}
+
+/* ===== FORMAT SEKUND NA HH:MM:SS ===== */
+function secToHMS(sec){
+  sec = Math.max(0, Math.floor(sec));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+
+function secToKg(sec){
+  return Math.max(0,(sec/600)*(+kg10min.value||2.5));
+}
+
+function todayStartISO(){
+  const d=new Date();
+  d.setHours(0,0,0,0);
+  return d.toISOString();
+}
+
+function monthStartISO(){
+  const d=new Date();
+  d.setDate(1);
+  d.setHours(0,0,0,0);
+  return d.toISOString();
+}
+
+async function fetchFeeds(p){
+  try{
+    const r=await fetch(
+      `https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${p}`
+    );
+    return (await r.json()).feeds || [];
+  }catch(e){
+    return [];
+  }
+}
+
+async function updateCurrent(){
+  const cur=await fetchFeeds("results=1");
+  if(!cur.length) return;
+  const f=cur[0];
+
+  const tK=+f.field5||0;
+  const tZ=+f.field1||0;
+
+  tKotel.textContent=tK.toFixed(1)+" °C";
+  tZpet.textContent=tZ.toFixed(1)+" °C";
+  tPodavac.textContent=(+f.field2||0).toFixed(1)+" °C";
+  tBojler.textContent=(+f.field3||0).toFixed(1)+" °C";
+  tVenku.textContent=(+f.field4||0).toFixed(1)+" °C";
+
+  deltaT.textContent=(tK-tZ).toFixed(1)+" °C";
+
+  const totalSec = +f.field8 || 0;
+  feedTotal.textContent = secToHMS(totalSec);
+}
+
+async function updateHour(){
+  const feeds=await fetchFeeds("minutes=60&results=120");
+  if(feeds.length<2) return;
+
+  const kg=secToKg(
+    feeds.at(-1).field8 - feeds[0].field8
+  );
+
+  kgHour.textContent=kg.toFixed(2)+" kg";
+  powerKWbig.textContent=(kg*ENERGY*EFF).toFixed(1)+" kWh";
+}
+
+async function updateDay(){
+  const feeds=await fetchFeeds("start="+todayStartISO()+"&results=2000");
+  if(feeds.length<2) return;
+
+  const kg=secToKg(
+    feeds.at(-1).field8 - feeds[0].field8
+  );
+
+  kgDay.textContent=kg.toFixed(2)+" kg";
+  costDay.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
+}
+
+async function updateMonth(){
+  const feeds=await fetchFeeds("start="+monthStartISO()+"&results=3000");
+  if(feeds.length<2) return;
+
+  const kg=secToKg(
+    feeds.at(-1).field8 - feeds[0].field8
+  );
+
+  kgMonth.textContent=kg.toFixed(0)+" kg";
+  costMonth.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
+}
+
+historyBtn.onclick = async () => {
+  historyBox.style.display =
+    historyBox.style.display === "none" ? "block" : "none";
+
+  historyTable.innerHTML="";
+  const days=14;
+  const price=+priceKg.value||6.2;
+
+  for(let i=0;i<days;i++){
+    const d1=new Date();
+    d1.setDate(d1.getDate()-i);
+    d1.setHours(0,0,0,0);
+    const d2=new Date(d1);
+    d2.setDate(d2.getDate()+1);
+
+    const feeds=await fetchFeeds(
+      `start=${d1.toISOString()}&end=${d2.toISOString()}&results=2000`
+    );
+
+    if(feeds.length>1){
+      const kg=secToKg(
+        feeds.at(-1).field8 - feeds[0].field8
+      );
+
+      historyTable.innerHTML+=`
+        <tr>
+          <td>${d1.toLocaleDateString("cs-CZ")}</td>
+          <td>${kg.toFixed(2)}</td>
+          <td>${(kg*price).toFixed(0)}</td>
+        </tr>`;
+    }
+  }
+};
+
+kg10min.oninput=()=>{
+  localStorage.kg10min=kg10min.value;
+  updateHour();updateDay();updateMonth();
+};
+priceKg.oninput=()=>{
+  localStorage.priceKg=priceKg.value;
+  updateDay();updateMonth();
+};
+
+updateClock();
+updateCurrent();
+updateHour();
+updateDay();
+updateMonth();
+
+setInterval(updateClock,1000);
+setInterval(updateCurrent,30000);
+setInterval(updateHour,300000);
+setInterval(updateDay,900000);
+setInterval(updateMonth,1800000);
+</script>
+
+</body>
+</html>
