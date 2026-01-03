@@ -1,12 +1,13 @@
 <!doctype html>
 <html lang="cs">
 <head>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  
 <meta charset="utf-8">
 <title>Kotelna – Attack FD 25</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<!-- ===== STYLE ===== -->
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:Segoe UI,system-ui;}
 body{
@@ -132,17 +133,14 @@ th{
 
 <body>
 
-<!-- ===== HEADER ===== -->
 <header>
   <div id="clock"></div>
   <div>Attack FD 25 – Profi panel</div>
   <button id="fsBtn" title="Fullscreen">⛶</button>
 </header>
 
-<!-- ===== MAIN CONTENT ===== -->
 <main>
 
-<!-- --- KARTY --- -->
 <div class="grid">
   <div class="card"><h2>🔥 Kotel</h2><div class="value" id="tKotel">--</div></div>
   <div class="card"><h2>↩️ Zpátečka</h2><div class="value blue" id="tZpet">--</div></div>
@@ -154,8 +152,8 @@ th{
   <div class="card"><h2>⏱️ Podavač celkem</h2><div class="value" id="feedTotal">--</div></div>
 </div>
 
-<!-- --- SPOTŘEBA --- -->
 <br>
+
 <div class="card">
 <h2>💰 Spotřeba uhlí</h2>
 <div class="grid">
@@ -170,115 +168,38 @@ th{
 <button id="monthHistoryBtn">📆 Měsíční historie spotřeby</button>
 </div>
 
-<!-- DENNÍ HISTORIE -->
-historyBtn.onclick = async () => {
-  historyBox.style.display = historyBox.style.display === "none" ? "block" : "none";
+<div id="historyBox" class="card" style="display:none;margin-top:20px">
+  <h2>📊 Denní historie – uhlí & cena</h2>
+  <canvas id="dayChart" style="max-height:300px;"></canvas>
+  <table>
+    <thead>
+      <tr>
+        <th>Datum</th>
+        <th>Spotřeba (kg)</th>
+        <th>Cena (Kč)</th>
+      </tr>
+    </thead>
+    <tbody id="historyTable"></tbody>
+  </table>
+</div>
 
-  const labels = [];
-  const dataKg = [];
-  const price = +priceKg.value || 6.2;
+<div id="monthHistoryBox" class="card" style="display:none;margin-top:20px">
+  <h2>📊 Měsíční historie – uhlí & cena</h2>
+  <canvas id="monthChart" style="max-height:300px;"></canvas>
+  <table>
+    <thead>
+      <tr>
+        <th>Měsíc</th>
+        <th>Spotřeba (kg)</th>
+        <th>Cena (Kč)</th>
+      </tr>
+    </thead>
+    <tbody id="monthHistoryTable"></tbody>
+  </table>
+</div>
 
-  historyTable.innerHTML = "";
-
-  for (let i = 13; i >= 0; i--) {
-    const d1 = new Date();
-    d1.setDate(d1.getDate() - i);
-    d1.setHours(0, 0, 0, 0);
-    const d2 = new Date(d1);
-    d2.setDate(d2.getDate() + 1);
-
-    const feeds = await fetchFeeds(`start=${d1.toISOString()}&end=${d2.toISOString()}&results=2000`);
-
-    if (feeds.length > 1) {
-      const kg = secToKg(feeds.at(-1).field8 - feeds[0].field8);
-      const cost = (kg * price).toFixed(0);
-
-      // naplnění tabulky
-      historyTable.innerHTML += `
-        <tr>
-          <td>${d1.toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit"})}</td>
-          <td>${kg.toFixed(1)}</td>
-          <td>${cost}</td>
-        </tr>
-      `;
-
-      // pro graf
-      labels.push(d1.toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit"}));
-      dataKg.push(kg.toFixed(1));
-    }
-  }
-
-  // vykreslení grafu
-  if (dayChartInstance) dayChartInstance.destroy();
-  const ctx = document.getElementById('dayChart').getContext('2d');
-  dayChartInstance = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: labels, datasets: [{ label: 'Spotřeba (kg)', data: dataKg, backgroundColor: '#1565c0' }] },
-    options: { responsive: true, plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true } } }
-  });
-};
-
-<!-- MĚSÍČNÍ HISTORIE -->
-monthHistoryBtn.onclick = async () => {
-  monthHistoryBox.style.display = monthHistoryBox.style.display === "none" ? "block" : "none";
-
-  const labels = [];
-  const dataKg = [];
-  const price = +priceKg.value || 6.2;
-
-  monthHistoryTable.innerHTML = "";
-
-  for (let i = 11; i >= 0; i--) {
-    const s = new Date();
-    s.setMonth(s.getMonth() - i, 1);
-    s.setHours(0, 0, 0, 0);
-    const e = new Date(s);
-    e.setMonth(s.getMonth() + 1);
-
-    const feeds = await fetchFeeds(`start=${s.toISOString()}&end=${e.toISOString()}&results=4000`);
-    if (feeds.length > 1) {
-      const kg = secToKg(feeds.at(-1).field8 - feeds[0].field8);
-      const cost = (kg * price).toFixed(0);
-
-      // naplnění tabulky
-      monthHistoryTable.innerHTML += `
-        <tr>
-          <td>${s.toLocaleDateString("cs-CZ",{month:"short",year:"2-digit"})}</td>
-          <td>${kg.toFixed(0)}</td>
-          <td>${cost}</td>
-        </tr>
-      `;
-
-      // pro graf
-      labels.push(s.toLocaleDateString("cs-CZ",{month:"short",year:"2-digit"}));
-      dataKg.push(kg.toFixed(0));
-    }
-  }
-
-  // vykreslení grafu
-  if (monthChartInstance) monthChartInstance.destroy();
-  const ctx = document.getElementById('monthChart').getContext('2d');
-  monthChartInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Spotřeba (kg)',
-        data: dataKg,
-        backgroundColor: 'rgba(46,125,50,0.2)',
-        borderColor: '#2e7d32',
-        fill: true,
-        tension: 0.3,
-        pointRadius: 5
-      }]
-    },
-    options: { responsive: true, plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true } } }
-  });
-};
-
-
-<!-- --- NASTAVENÍ --- -->
 <br>
+
 <div class="card">
 <h2>⚙️ Nastavení</h2>
 <div class="settings">
@@ -292,16 +213,11 @@ monthHistoryBtn.onclick = async () => {
   </div>
 </div>
 </div>
-  
 
-<!-- --- LOGO --- -->
 <div id="footerLogo">
   <img src="https://raw.githubusercontent.com/Lukianoo/fd25-dashboard/main/logo-elektroservis.png" alt="Logo Elektroservis">
 </div>
 
-</main>
-
-<!-- ===== SCRIPT ===== -->
 <script>
 const CHANNEL = 231269;
 const ENERGY = 4.8; // kWh / kg
@@ -310,11 +226,14 @@ const EFF = 0.75;
 kg10min.value = localStorage.kg10min || 2.5;
 priceKg.value = localStorage.priceKg || 6.2;
 
+let dayChartInstance = null;
+let monthChartInstance = null;
+
 function updateClock(){ clock.textContent = new Date().toLocaleString("cs-CZ"); }
 function secToHMS(sec){ sec=Math.max(0,Math.floor(sec));const h=Math.floor(sec/3600);const m=Math.floor((sec%3600)/60);const s=sec%60; return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`; }
 function secToKg(sec){ return Math.max(0,(sec/600)*(+kg10min.value||2.5)); }
 function todayStartISO(){ const d=new Date();d.setHours(0,0,0,0);return d.toISOString(); }
-function monthStartISO(){ const d=new Date();d.setDate(1);d.setHours(0,0,0,0);return d.toISOString(); }
+function monthStartISO(){ const d=new Date(); d.setDate(1); d.setHours(0,0,0,0); return d.toISOString(); }
 
 async function fetchFeeds(p){ try{ const r=await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${p}`); return (await r.json()).feeds||[]; }catch(e){return[];} }
 
@@ -334,39 +253,54 @@ async function updateHour(){ const f=await fetchFeeds("minutes=60&results=120");
 async function updateDay(){ const f=await fetchFeeds("start="+todayStartISO()+"&results=2000"); if(f.length<2)return; const kg=secToKg(f.at(-1).field8-f[0].field8); kgDay.textContent=kg.toFixed(2)+" kg"; costDay.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč"; }
 async function updateMonth(){ const f=await fetchFeeds("start="+monthStartISO()+"&results=3000"); if(f.length<2)return; const kg=secToKg(f.at(-1).field8-f[0].field8); kgMonth.textContent=kg.toFixed(0)+" kg"; costMonth.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč"; }
 
-historyBtn.onclick=async()=>{
-  historyBox.style.display=historyBox.style.display==="none"?"block":"none";
+historyBtn.onclick = async () => {
+  historyBox.style.display = historyBox.style.display==="none"?"block":"none";
+
+  const labels=[]; const dataKg=[]; const price=+priceKg.value||6.2;
   historyTable.innerHTML="";
-  const price=+priceKg.value||6.2;
-  for(let i=0;i<14;i++){
-    const d1=new Date();d1.setDate(d1.getDate()-i);d1.setHours(0,0,0,0);
-    const d2=new Date(d1);d2.setDate(d2.getDate()+1);
-    const f=await fetchFeeds(`start=${d1.toISOString()}&end=${d2.toISOString()}&results=2000`);
-    if(f.length>1){ const kg=secToKg(f.at(-1).field8-f[0].field8);
-      historyTable.innerHTML+=`<tr><td>${d1.toLocaleDateString("cs-CZ")}</td><td>${kg.toFixed(2)}</td><td>${(kg*price).toFixed(0)}</td></tr>`; }
+  for(let i=13;i>=0;i--){
+    const d1=new Date(); d1.setDate(d1.getDate()-i); d1.setHours(0,0,0,0);
+    const d2=new Date(d1); d2.setDate(d2.getDate()+1);
+    const feeds=await fetchFeeds(`start=${d1.toISOString()}&end=${d2.toISOString()}&results=2000`);
+    if(feeds.length>1){
+      const kg=secToKg(feeds.at(-1).field8 - feeds[0].field8);
+      const cost=(kg*price).toFixed(0);
+      historyTable.innerHTML+=`<tr><td>${d1.toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit"})}</td><td>${kg.toFixed(1)}</td><td>${cost}</td></tr>`;
+      labels.push(d1.toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit"}));
+      dataKg.push(Number(kg.toFixed(1)));
+    }
   }
+  if(dayChartInstance) dayChartInstance.destroy();
+  const ctx=document.getElementById('dayChart').getContext('2d');
+  dayChartInstance=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Spotřeba (kg)',data:dataKg,backgroundColor:'#1565c0'}]},options:{responsive:true,plugins:{legend:{display:true}},scales:{y:{beginAtZero:true}}}});
 };
 
-monthHistoryBtn.onclick=async()=>{
-  monthHistoryBox.style.display=monthHistoryBox.style.display==="none"?"block":"none";
+monthHistoryBtn.onclick = async () => {
+  monthHistoryBox.style.display = monthHistoryBox.style.display==="none"?"block":"none";
+
+  const labels=[]; const dataKg=[]; const price=+priceKg.value||6.2;
   monthHistoryTable.innerHTML="";
-  const price=+priceKg.value||6.2;
-  for(let i=0;i<12;i++){
-    const s=new Date();s.setMonth(s.getMonth()-i,1);s.setHours(0,0,0,0);
-    const e=new Date(s);e.setMonth(e.getMonth()+1);
-    const f=await fetchFeeds(`start=${s.toISOString()}&end=${e.toISOString()}&results=4000`);
-    if(f.length>1){ const kg=secToKg(f.at(-1).field8-f[0].field8);
-      monthHistoryTable.innerHTML+=`<tr><td>${s.toLocaleDateString("cs-CZ",{month:"long",year:"numeric"})}</td><td>${kg.toFixed(1)}</td><td>${(kg*price).toFixed(0)}</td></tr>`; }
+  for(let i=11;i>=0;i--){
+    const s=new Date(); s.setMonth(s.getMonth()-i,1); s.setHours(0,0,0,0);
+    const e=new Date(s.getFullYear(), s.getMonth()+1,1);
+    const feeds=await fetchFeeds(`start=${s.toISOString()}&end=${e.toISOString()}&results=4000`);
+    if(feeds.length>1){
+      const kg=secToKg(feeds.at(-1).field8 - feeds[0].field8);
+      const cost=(kg*price).toFixed(0);
+      monthHistoryTable.innerHTML+=`<tr><td>${s.toLocaleDateString("cs-CZ",{month:"short",year:"2-digit"})}</td><td>${kg.toFixed(0)}</td><td>${cost}</td></tr>`;
+      labels.push(s.toLocaleDateString("cs-CZ",{month:"short",year:"2-digit"}));
+      dataKg.push(Number(kg.toFixed(0)));
+    }
   }
+  if(monthChartInstance) monthChartInstance.destroy();
+  const ctx=document.getElementById('monthChart').getContext('2d');
+  monthChartInstance=new Chart(ctx,{type:'line',data:{labels:labels,datasets:[{label:'Spotřeba (kg)',data:dataKg,backgroundColor:'rgba(46,125,50,0.2)',borderColor:'#2e7d32',fill:true,tension:0.3,pointRadius:5} ]},options:{responsive:true,plugins:{legend:{display:true}},scales:{y:{beginAtZero:true}}}});
 };
 
 kg10min.oninput=()=>{ localStorage.kg10min=kg10min.value; updateHour(); updateDay(); updateMonth(); }
 priceKg.oninput=()=>{ localStorage.priceKg=priceKg.value; updateDay(); updateMonth(); }
 
-fsBtn.onclick=()=>{
-  if(!document.fullscreenElement){ document.documentElement.requestFullscreen(); fsBtn.textContent="⛶×"; }
-  else{ document.exitFullscreen(); fsBtn.textContent="⛶"; }
-}
+fsBtn.onclick=()=>{ if(!document.fullscreenElement){ document.documentElement.requestFullscreen(); fsBtn.textContent="⛶×"; } else{ document.exitFullscreen(); fsBtn.textContent="⛶"; } }
 
 updateClock(); updateCurrent(); updateHour(); updateDay(); updateMonth();
 setInterval(updateClock,1000);
@@ -374,88 +308,6 @@ setInterval(updateCurrent,30000);
 setInterval(updateHour,300000);
 setInterval(updateDay,900000);
 setInterval(updateMonth,1800000);
-let dayChartInstance = null;
-let monthChartInstance = null;
-
-// Denní graf
-async function updateDayChart(){
-  const labels = [];
-  const dataKg = [];
-  const price = +priceKg.value||6.2;
-  for(let i=13;i>=0;i--){
-    const d1 = new Date(); d1.setDate(d1.getDate()-i); d1.setHours(0,0,0,0);
-    const d2 = new Date(d1); d2.setDate(d2.getDate()+1);
-    const feeds = await fetchFeeds(`start=${d1.toISOString()}&end=${d2.toISOString()}&results=2000`);
-    if(feeds.length>1){
-      const kg = secToKg(feeds.at(-1).field8 - feeds[0].field8);
-      labels.push(d1.toLocaleDateString("cs-CZ",{day:'2-digit',month:'2-digit'}));
-      dataKg.push(kg.toFixed(1));
-    }
-  }
-
-  if(dayChartInstance) dayChartInstance.destroy();
-  const ctx = document.getElementById('dayChart').getContext('2d');
-  dayChartInstance = new Chart(ctx,{
-    type:'bar',
-    data:{
-      labels: labels,
-      datasets:[
-        {label:'Spotřeba (kg)', data:dataKg, backgroundColor:'#1565c0'}
-      ]
-    },
-    options:{
-      responsive:true,
-      plugins:{legend:{display:true}},
-      scales:{y:{beginAtZero:true}}
-    }
-  });
-}
-
-// Měsíční graf
-async function updateMonthChart(){
-  const labels = [];
-  const dataKg = [];
-  const price = +priceKg.value||6.2;
-  for(let i=11;i>=0;i--){
-    const s = new Date(); s.setMonth(s.getMonth()-i,1); s.setHours(0,0,0,0);
-    const e = new Date(s); e.setMonth(s.getMonth()+1);
-    const feeds = await fetchFeeds(`start=${s.toISOString()}&end=${e.toISOString()}&results=4000`);
-    if(feeds.length>1){
-      const kg = secToKg(feeds.at(-1).field8 - feeds[0].field8);
-      labels.push(s.toLocaleDateString("cs-CZ",{month:"short",year:"2-digit"}));
-      dataKg.push(kg.toFixed(0));
-    }
-  }
-
-  if(monthChartInstance) monthChartInstance.destroy();
-  const ctx = document.getElementById('monthChart').getContext('2d');
-  monthChartInstance = new Chart(ctx,{
-    type:'line',
-    data:{
-      labels: labels,
-      datasets:[
-        {label:'Spotřeba (kg)', data:dataKg, backgroundColor:'rgba(46,125,50,0.2)', borderColor:'#2e7d32', fill:true, tension:0.3, pointRadius:5}
-      ]
-    },
-    options:{
-      responsive:true,
-      plugins:{legend:{display:true}},
-      scales:{y:{beginAtZero:true}}
-    }
-  });
-}
-
-// Zavoláme po otevření boxů
-historyBtn.onclick = async()=>{
-  historyBox.style.display = historyBox.style.display==="none"?"block":"none";
-  await updateDayChart();
-};
-
-monthHistoryBtn.onclick = async()=>{
-  monthHistoryBox.style.display = monthHistoryBox.style.display==="none"?"block":"none";
-  await updateMonthChart();
-};
-  
 </script>
 
 </body>
