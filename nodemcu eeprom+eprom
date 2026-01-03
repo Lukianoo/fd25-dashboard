@@ -1,0 +1,164 @@
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <ThingSpeak.h>
+#include <ESP8266WiFi.h>
+#include <EEPROM.h>
+
+// ================== PINY ==================
+#define ONE_WIRE_BUS D4
+#define FEEDER_PIN   D7
+
+// ================== WIFI + THINGSPEAK ==================
+unsigned long myChannelNumber = 231269;
+const char * myWriteAPIKey = "MSL0D5ZEMDQYIB4M";
+
+const char* ssid     = "TP-LINK_6708";
+const char* password = "8007214985";
+
+// ================== CASY ==================
+const unsigned long SEND_INTERVAL   = 120000;      // 2 min
+const unsigned long EEPROM_INTERVAL = 3600000UL;   // 60 min
+
+unsigned long lastSendTime   = 0;
+unsigned long lastEEPROMTime = 0;
+
+// ================== EEPROM ==================
+#define EEPROM_SIZE 16
+#define EEPROM_ADDR 0
+
+// ================== RTC STRUCT ==================
+struct RTCData {
+  uint32_t magic;
+  unsigned long feederTotal;
+};
+
+RTCData rtc;
+
+// ================== OBJEKTY ==================
+WiFiClient client;
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+
+// ================== PODAVAC ==================
+bool feederState = false;
+bool feederLastState = false;
+unsigned long feederStartTime = 0;
+unsigned long feederInterval  = 0;
+unsigned long feederTotal     = 0;
+unsigned long lastSentTotal   = 0;
+
+// ================== RTC FUNKCE ==================
+bool loadRTC() {
+  ESP.rtcUserMemoryRead(0, (uint32_t*)&rtc, sizeof(rtc));
+  return (rtc.magic == 0xAABBCCDD);
+}
+
+void saveRTC() {
+  rtc.magic = 0xAABBCCDD;
+  rtc.feederTotal = feederTotal;
+  ESP.rtcUserMemoryWrite(0, (uint32_t*)&rtc, sizeof(rtc));
+}
+
+// ================== EEPROM ==================
+void saveEEPROM(unsigned long val) {
+  EEPROM.put(EEPROM_ADDR, val);
+  EEPROM.commit();
+}
+
+unsigned long loadEEPROM() {
+  unsigned long v;
+  EEPROM.get(EEPROM_ADDR, v);
+  if (v == 0xFFFFFFFF) return 0;
+  return v;
+}
+
+// ================== SETUP ==================
+void setup() {
+  Serial.begin(115200);
+  delay(200);
+
+  pinMode(FEEDER_PIN, INPUT_PULLUP);
+  EEPROM.begin(EEPROM_SIZE);
+
+  // ===== LOAD EEPROM =====
+  feederTotal = loadEEPROM();
+  Serial.print("EEPROM TOTAL [s]: ");
+  Serial.println(feederTotal / 1000.0f);
+
+  // ===== LOAD RTC =====
+  if (loadRTC() && rtc.feederTotal >= feederTotal) {
+    feederTotal = rtc.feederTotal;
+    Serial.println("RTC TOTAL obnoven");
+  } else {
+    Serial.println("RTC neplatne");
+  }
+
+  // ===== WIFI =====
+  WiFi.begin(ssid, password);
+  unsigned long t0 = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - t0 < 15000) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+
+  if (WiFi.status() == WL_CONNECTED) {
+    ThingSpeak.begin(client);
+    Serial.println("WiFi OK");
+  } else {
+    Serial.println("WiFi FAIL");
+  }
+
+  lastSentTotal   = feederTotal;
+  lastEEPROMTime = millis();
+
+  sensors.begin();
+  Serial.println("BOOT OK");
+}
+
+// ================== LOOP ==================
+void loop() {
+  // ===== PODAVAC =====
+  feederState = (digitalRead(FEEDER_PIN) == LOW);
+
+  if (feederState && !feederLastState) {
+    feederStartTime = millis();
+  }
+
+  if (!feederState && feederLastState) {
+    feederInterval = millis() - feederStartTime;
+    feederTotal += feederInterval;
+
+    saveRTC();   // RTC bez omezeni zapisu
+  }
+
+  feederLastState = feederState;
+
+  // ===== EEPROM SAVE (1x / 60 min) =====
+  if (millis() - lastEEPROMTime >= EEPROM_INTERVAL) {
+    saveEEPROM(feederTotal);
+    lastEEPROMTime = millis();
+    Serial.println("EEPROM ulozeno");
+  }
+
+  // ===== ODESILANI NA THINGSPEAK =====
+  if (millis() - lastSendTime >= SEND_INTERVAL) {
+    lastSendTime = millis();
+
+    sensors.requestTemperatures();
+
+    // ---- TEPLOTY (FIELD 1–5) ----
+    for (int i = 0; i < 5; i++) {
+      float t = sensors.getTempCByIndex(i);
+      ThingSpeak.setField(1 + i, t);
+    }
+
+    // ---- TOTAL (FIELD 8) ----
+    if (feederTotal >= lastSentTotal && feederTotal > 0) {
+      ThingSpeak.setField(8, feederTotal / 1000.0f);
+      lastSentTotal = feederTotal;
+    }
+
+    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+  }
+}
