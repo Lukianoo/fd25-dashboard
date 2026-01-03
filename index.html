@@ -170,9 +170,10 @@ th{
 <button id="monthHistoryBtn">📆 Měsíční historie spotřeby</button>
 </div>
 
-<!-- --- DENNÍ HISTORIE --- -->
+<!-- DENNÍ HISTORIE -->
 <div id="historyBox" class="card" style="display:none;margin-top:20px">
   <h2>📊 Denní historie – uhlí & cena</h2>
+  <canvas id="dayChart" style="max-height:300px;"></canvas>
   <table>
     <thead>
       <tr>
@@ -185,9 +186,10 @@ th{
   </table>
 </div>
 
-<!-- --- MĚSÍČNÍ HISTORIE --- -->
+<!-- MĚSÍČNÍ HISTORIE -->
 <div id="monthHistoryBox" class="card" style="display:none;margin-top:20px">
   <h2>📊 Měsíční historie – uhlí & cena</h2>
+  <canvas id="monthChart" style="max-height:300px;"></canvas>
   <table>
     <thead>
       <tr>
@@ -199,6 +201,7 @@ th{
     <tbody id="monthHistoryTable"></tbody>
   </table>
 </div>
+
 
 <!-- --- NASTAVENÍ --- -->
 <br>
