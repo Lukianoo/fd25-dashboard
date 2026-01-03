@@ -197,6 +197,17 @@ th{
     <tbody id="monthHistoryTable"></tbody>
   </table>
 </div>
+<div id="totalHistoryBox" class="card" style="margin-top:20px">
+  <h2>📊 Celková spotřeba – od začátku</h2>
+  <canvas id="totalChart" style="max-height:300px;"></canvas>
+  <div class="grid" style="margin-top:15px;">
+    <div><div class="sub">Kg celkem</div><div class="value blue" id="kgTotal">0 kg</div></div>
+    <div><div class="sub">Cena celkem</div><div class="value green" id="costTotal">0 Kč</div></div>
+    <div>
+      <button id="resetTotalBtn">♻️ Vynulovat celkovou spotřebu</button>
+    </div>
+  </div>
+</div>
 
 <br>
 
@@ -228,6 +239,8 @@ priceKg.value = localStorage.priceKg || 6.2;
 
 let dayChartInstance = null;
 let monthChartInstance = null;
+let totalChartInstance = null;
+let totalOffset = localStorage.totalOffset || 0; // pro vynulování
 
 function updateClock(){ clock.textContent = new Date().toLocaleString("cs-CZ"); }
 function secToHMS(sec){ sec=Math.max(0,Math.floor(sec));const h=Math.floor(sec/3600);const m=Math.floor((sec%3600)/60);const s=sec%60; return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`; }
@@ -252,6 +265,46 @@ async function updateCurrent(){
 async function updateHour(){ const f=await fetchFeeds("minutes=60&results=120"); if(f.length<2)return; const kg=secToKg(f.at(-1).field8-f[0].field8); kgHour.textContent=kg.toFixed(2)+" kg"; powerKWbig.textContent=(kg*ENERGY*EFF).toFixed(1)+" kWh"; }
 async function updateDay(){ const f=await fetchFeeds("start="+todayStartISO()+"&results=2000"); if(f.length<2)return; const kg=secToKg(f.at(-1).field8-f[0].field8); kgDay.textContent=kg.toFixed(2)+" kg"; costDay.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč"; }
 async function updateMonth(){ const f=await fetchFeeds("start="+monthStartISO()+"&results=3000"); if(f.length<2)return; const kg=secToKg(f.at(-1).field8-f[0].field8); kgMonth.textContent=kg.toFixed(0)+" kg"; costMonth.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč"; }
+async function updateTotalHistory(){
+  const feeds = await fetchFeeds("results=3000"); // nejdelší možné
+  if(feeds.length<2) return;
+
+  const firstSec = +feeds[0].field8 || 0;
+  const lastSec = +feeds.at(-1).field8 || 0;
+
+  const totalSec = lastSec - firstSec - totalOffset;
+  const kg = secToKg(totalSec);
+  const cost = (kg * (+priceKg.value || 6.2)).toFixed(0);
+
+  kgTotal.textContent = kg.toFixed(1) + " kg";
+  costTotal.textContent = cost + " Kč";
+
+  const labels = feeds.map(f=>new Date(f.created_at).toLocaleDateString("cs-CZ"));
+  const dataKg = feeds.map(f => secToKg(+f.field8 - firstSec - totalOffset));
+
+  if(totalChartInstance) totalChartInstance.destroy();
+  const ctx = document.getElementById('totalChart').getContext('2d');
+  totalChartInstance = new Chart(ctx,{
+    type:'line',
+    data:{
+      labels: labels,
+      datasets:[{
+        label:'Kg celkem',
+        data:dataKg,
+        borderColor:'#1565c0',
+        backgroundColor:'rgba(21,101,192,0.2)',
+        fill:true,
+        tension:0.2,
+        pointRadius:2
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:true}},
+      scales:{y:{beginAtZero:true}}
+    }
+  });
+}
 
 historyBtn.onclick = async () => {
   historyBox.style.display = historyBox.style.display==="none"?"block":"none";
@@ -291,18 +344,32 @@ monthHistoryBtn.onclick = async () => {
       labels.push(s.toLocaleDateString("cs-CZ",{month:"short",year:"2-digit"}));
       dataKg.push(Number(kg.toFixed(0)));
     }
+    
   }
   if(monthChartInstance) monthChartInstance.destroy();
   const ctx=document.getElementById('monthChart').getContext('2d');
   monthChartInstance=new Chart(ctx,{type:'line',data:{labels:labels,datasets:[{label:'Spotřeba (kg)',data:dataKg,backgroundColor:'rgba(46,125,50,0.2)',borderColor:'#2e7d32',fill:true,tension:0.3,pointRadius:5} ]},options:{responsive:true,plugins:{legend:{display:true}},scales:{y:{beginAtZero:true}}}});
 };
+resetTotalBtn.onclick = () => {
+  if(confirm("Opravdu chcete vynulovat celkovou spotřebu?")){
+    const feeds = totalChartInstance.data.datasets[0].data;
+    if(feeds.length > 0){
+      totalOffset += feeds[0];          // posune offset o aktuální první hodnotu
+      localStorage.totalOffset = totalOffset;  // uloží do localStorage
+      updateTotalHistory();             // aktualizuje graf a hodnoty
+    }
+  }
+};
 
-kg10min.oninput=()=>{ localStorage.kg10min=kg10min.value; updateHour(); updateDay(); updateMonth(); }
-priceKg.oninput=()=>{ localStorage.priceKg=priceKg.value; updateDay(); updateMonth(); }
+kg10min.oninput=()=>{ localStorage.kg10min=kg10min.value; updateHour(); updateDay(); updateMonth();updateTotalHistory();
+ }
+priceKg.oninput=()=>{ localStorage.priceKg=priceKg.value; updateDay(); updateMonth();updateTotalHistory();
+ }
 
 fsBtn.onclick=()=>{ if(!document.fullscreenElement){ document.documentElement.requestFullscreen(); fsBtn.textContent="⛶×"; } else{ document.exitFullscreen(); fsBtn.textContent="⛶"; } }
 
-updateClock(); updateCurrent(); updateHour(); updateDay(); updateMonth();
+updateClock(); updateCurrent(); updateHour(); updateDay(); updateMonth();updateTotalHistory();
+
 setInterval(updateClock,1000);
 setInterval(updateCurrent,30000);
 setInterval(updateHour,300000);
