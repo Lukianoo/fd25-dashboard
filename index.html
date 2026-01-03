@@ -49,6 +49,19 @@ button{
   color:#fff;
   cursor:pointer;
 }
+  #fsBtn{
+  background:#1e3c72;
+  border:none;
+  color:#fff;
+  font-size:18px;
+  padding:8px 14px;
+  border-radius:8px;
+  cursor:pointer;
+}
+#fsBtn:hover{
+  background:#16305c;
+}
+
 table{width:100%;border-collapse:collapse}
 th,td{padding:8px;text-align:center}
 th{background:#eee}
@@ -60,7 +73,9 @@ th{background:#eee}
 <header>
   <div id="clock"></div>
   <div>Attack FD 25 – Profi panel</div>
+  <button id="fsBtn" title="Fullscreen">⛶</button>
 </header>
+
 
 <main>
 
@@ -218,6 +233,16 @@ async function updateMonth(){
   kgMonth.textContent=kg.toFixed(0)+" kg";
   costMonth.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
 }
+  fsBtn.onclick = () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+    fsBtn.textContent = "⛶×";
+  } else {
+    document.exitFullscreen();
+    fsBtn.textContent = "⛶";
+  }
+};
+
 
 historyBtn.onclick=async()=>{
   historyBox.style.display=historyBox.style.display==="none"?"block":"none";
