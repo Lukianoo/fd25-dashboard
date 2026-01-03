@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="cs">
 <head>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  
 <meta charset="utf-8">
 <title>Kotelna – Attack FD 25</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -214,6 +215,7 @@ th{
   </div>
 </div>
 </div>
+  
 
 <!-- --- LOGO --- -->
 <div id="footerLogo">
@@ -295,6 +297,88 @@ setInterval(updateCurrent,30000);
 setInterval(updateHour,300000);
 setInterval(updateDay,900000);
 setInterval(updateMonth,1800000);
+let dayChartInstance = null;
+let monthChartInstance = null;
+
+// Denní graf
+async function updateDayChart(){
+  const labels = [];
+  const dataKg = [];
+  const price = +priceKg.value||6.2;
+  for(let i=13;i>=0;i--){
+    const d1 = new Date(); d1.setDate(d1.getDate()-i); d1.setHours(0,0,0,0);
+    const d2 = new Date(d1); d2.setDate(d2.getDate()+1);
+    const feeds = await fetchFeeds(`start=${d1.toISOString()}&end=${d2.toISOString()}&results=2000`);
+    if(feeds.length>1){
+      const kg = secToKg(feeds.at(-1).field8 - feeds[0].field8);
+      labels.push(d1.toLocaleDateString("cs-CZ",{day:'2-digit',month:'2-digit'}));
+      dataKg.push(kg.toFixed(1));
+    }
+  }
+
+  if(dayChartInstance) dayChartInstance.destroy();
+  const ctx = document.getElementById('dayChart').getContext('2d');
+  dayChartInstance = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels: labels,
+      datasets:[
+        {label:'Spotřeba (kg)', data:dataKg, backgroundColor:'#1565c0'}
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:true}},
+      scales:{y:{beginAtZero:true}}
+    }
+  });
+}
+
+// Měsíční graf
+async function updateMonthChart(){
+  const labels = [];
+  const dataKg = [];
+  const price = +priceKg.value||6.2;
+  for(let i=11;i>=0;i--){
+    const s = new Date(); s.setMonth(s.getMonth()-i,1); s.setHours(0,0,0,0);
+    const e = new Date(s); e.setMonth(s.getMonth()+1);
+    const feeds = await fetchFeeds(`start=${s.toISOString()}&end=${e.toISOString()}&results=4000`);
+    if(feeds.length>1){
+      const kg = secToKg(feeds.at(-1).field8 - feeds[0].field8);
+      labels.push(s.toLocaleDateString("cs-CZ",{month:"short",year:"2-digit"}));
+      dataKg.push(kg.toFixed(0));
+    }
+  }
+
+  if(monthChartInstance) monthChartInstance.destroy();
+  const ctx = document.getElementById('monthChart').getContext('2d');
+  monthChartInstance = new Chart(ctx,{
+    type:'line',
+    data:{
+      labels: labels,
+      datasets:[
+        {label:'Spotřeba (kg)', data:dataKg, backgroundColor:'rgba(46,125,50,0.2)', borderColor:'#2e7d32', fill:true, tension:0.3, pointRadius:5}
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:true}},
+      scales:{y:{beginAtZero:true}}
+    }
+  });
+}
+
+// Zavoláme po otevření boxů
+historyBtn.onclick = async()=>{
+  historyBox.style.display = historyBox.style.display==="none"?"block":"none";
+  await updateDayChart();
+};
+
+monthHistoryBtn.onclick = async()=>{
+  monthHistoryBox.style.display = monthHistoryBox.style.display==="none"?"block":"none";
+  await updateMonthChart();
+};
+  
 </script>
 
 </body>
