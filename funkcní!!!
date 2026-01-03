@@ -89,6 +89,7 @@ th{background:#eee}
 
 <br>
 <button id="historyBtn">📅 Denní historie spotřeby</button>
+<button id="monthHistoryBtn">📆 Měsíční historie spotřeby</button>
 </div>
 
 <div id="historyBox" class="card" style="display:none;margin-top:20px">
@@ -102,6 +103,20 @@ th{background:#eee}
       </tr>
     </thead>
     <tbody id="historyTable"></tbody>
+  </table>
+</div>
+
+<div id="monthHistoryBox" class="card" style="display:none;margin-top:20px">
+  <h2>📊 Měsíční historie – uhlí & cena</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Měsíc</th>
+        <th>Spotřeba (kg)</th>
+        <th>Cena (Kč)</th>
+      </tr>
+    </thead>
+    <tbody id="monthHistoryTable"></tbody>
   </table>
 </div>
 
@@ -125,7 +140,7 @@ th{background:#eee}
 
 <script>
 const CHANNEL = 231269;
-const ENERGY = 4.8; // kWh / kg
+const ENERGY = 4.8;
 const EFF = 0.75;
 
 kg10min.value = localStorage.kg10min || 2.5;
@@ -135,12 +150,11 @@ function updateClock(){
   clock.textContent = new Date().toLocaleString("cs-CZ");
 }
 
-/* ===== FORMAT SEKUND NA HH:MM:SS ===== */
 function secToHMS(sec){
-  sec = Math.max(0, Math.floor(sec));
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
+  sec=Math.max(0,Math.floor(sec));
+  const h=Math.floor(sec/3600);
+  const m=Math.floor((sec%3600)/60);
+  const s=sec%60;
   return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
 
@@ -149,34 +163,24 @@ function secToKg(sec){
 }
 
 function todayStartISO(){
-  const d=new Date();
-  d.setHours(0,0,0,0);
-  return d.toISOString();
+  const d=new Date();d.setHours(0,0,0,0);return d.toISOString();
 }
 
 function monthStartISO(){
-  const d=new Date();
-  d.setDate(1);
-  d.setHours(0,0,0,0);
-  return d.toISOString();
+  const d=new Date();d.setDate(1);d.setHours(0,0,0,0);return d.toISOString();
 }
 
 async function fetchFeeds(p){
   try{
-    const r=await fetch(
-      `https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${p}`
-    );
-    return (await r.json()).feeds || [];
-  }catch(e){
-    return [];
-  }
+    const r=await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${p}`);
+    return (await r.json()).feeds||[];
+  }catch(e){return[];}
 }
 
 async function updateCurrent(){
   const cur=await fetchFeeds("results=1");
-  if(!cur.length) return;
+  if(!cur.length)return;
   const f=cur[0];
-
   const tK=+f.field5||0;
   const tZ=+f.field1||0;
 
@@ -185,98 +189,70 @@ async function updateCurrent(){
   tPodavac.textContent=(+f.field2||0).toFixed(1)+" °C";
   tBojler.textContent=(+f.field3||0).toFixed(1)+" °C";
   tVenku.textContent=(+f.field4||0).toFixed(1)+" °C";
-
   deltaT.textContent=(tK-tZ).toFixed(1)+" °C";
 
-  const totalSec = +f.field8 || 0;
-  feedTotal.textContent = secToHMS(totalSec);
+  const totalSec=+f.field8||0;
+  feedTotal.textContent=secToHMS(totalSec);
 }
 
 async function updateHour(){
-  const feeds=await fetchFeeds("minutes=60&results=120");
-  if(feeds.length<2) return;
-
-  const kg=secToKg(
-    feeds.at(-1).field8 - feeds[0].field8
-  );
-
+  const f=await fetchFeeds("minutes=60&results=120");
+  if(f.length<2)return;
+  const kg=secToKg(f.at(-1).field8-f[0].field8);
   kgHour.textContent=kg.toFixed(2)+" kg";
   powerKWbig.textContent=(kg*ENERGY*EFF).toFixed(1)+" kWh";
 }
 
 async function updateDay(){
-  const feeds=await fetchFeeds("start="+todayStartISO()+"&results=2000");
-  if(feeds.length<2) return;
-
-  const kg=secToKg(
-    feeds.at(-1).field8 - feeds[0].field8
-  );
-
+  const f=await fetchFeeds("start="+todayStartISO()+"&results=2000");
+  if(f.length<2)return;
+  const kg=secToKg(f.at(-1).field8-f[0].field8);
   kgDay.textContent=kg.toFixed(2)+" kg";
   costDay.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
 }
 
 async function updateMonth(){
-  const feeds=await fetchFeeds("start="+monthStartISO()+"&results=3000");
-  if(feeds.length<2) return;
-
-  const kg=secToKg(
-    feeds.at(-1).field8 - feeds[0].field8
-  );
-
+  const f=await fetchFeeds("start="+monthStartISO()+"&results=3000");
+  if(f.length<2)return;
+  const kg=secToKg(f.at(-1).field8-f[0].field8);
   kgMonth.textContent=kg.toFixed(0)+" kg";
   costMonth.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
 }
 
-historyBtn.onclick = async () => {
-  historyBox.style.display =
-    historyBox.style.display === "none" ? "block" : "none";
-
+historyBtn.onclick=async()=>{
+  historyBox.style.display=historyBox.style.display==="none"?"block":"none";
   historyTable.innerHTML="";
-  const days=14;
   const price=+priceKg.value||6.2;
-
-  for(let i=0;i<days;i++){
-    const d1=new Date();
-    d1.setDate(d1.getDate()-i);
-    d1.setHours(0,0,0,0);
-    const d2=new Date(d1);
-    d2.setDate(d2.getDate()+1);
-
-    const feeds=await fetchFeeds(
-      `start=${d1.toISOString()}&end=${d2.toISOString()}&results=2000`
-    );
-
-    if(feeds.length>1){
-      const kg=secToKg(
-        feeds.at(-1).field8 - feeds[0].field8
-      );
-
-      historyTable.innerHTML+=`
-        <tr>
-          <td>${d1.toLocaleDateString("cs-CZ")}</td>
-          <td>${kg.toFixed(2)}</td>
-          <td>${(kg*price).toFixed(0)}</td>
-        </tr>`;
+  for(let i=0;i<14;i++){
+    const d1=new Date();d1.setDate(d1.getDate()-i);d1.setHours(0,0,0,0);
+    const d2=new Date(d1);d2.setDate(d2.getDate()+1);
+    const f=await fetchFeeds(`start=${d1.toISOString()}&end=${d2.toISOString()}&results=2000`);
+    if(f.length>1){
+      const kg=secToKg(f.at(-1).field8-f[0].field8);
+      historyTable.innerHTML+=`<tr><td>${d1.toLocaleDateString("cs-CZ")}</td><td>${kg.toFixed(2)}</td><td>${(kg*price).toFixed(0)}</td></tr>`;
     }
   }
 };
 
-kg10min.oninput=()=>{
-  localStorage.kg10min=kg10min.value;
-  updateHour();updateDay();updateMonth();
-};
-priceKg.oninput=()=>{
-  localStorage.priceKg=priceKg.value;
-  updateDay();updateMonth();
+monthHistoryBtn.onclick=async()=>{
+  monthHistoryBox.style.display=monthHistoryBox.style.display==="none"?"block":"none";
+  monthHistoryTable.innerHTML="";
+  const price=+priceKg.value||6.2;
+  for(let i=0;i<12;i++){
+    const s=new Date();s.setMonth(s.getMonth()-i,1);s.setHours(0,0,0,0);
+    const e=new Date(s);e.setMonth(e.getMonth()+1);
+    const f=await fetchFeeds(`start=${s.toISOString()}&end=${e.toISOString()}&results=4000`);
+    if(f.length>1){
+      const kg=secToKg(f.at(-1).field8-f[0].field8);
+      monthHistoryTable.innerHTML+=`<tr><td>${s.toLocaleDateString("cs-CZ",{month:"long",year:"numeric"})}</td><td>${kg.toFixed(1)}</td><td>${(kg*price).toFixed(0)}</td></tr>`;
+    }
+  }
 };
 
-updateClock();
-updateCurrent();
-updateHour();
-updateDay();
-updateMonth();
+kg10min.oninput=()=>{localStorage.kg10min=kg10min.value;updateHour();updateDay();updateMonth();}
+priceKg.oninput=()=>{localStorage.priceKg=priceKg.value;updateDay();updateMonth();}
 
+updateClock();updateCurrent();updateHour();updateDay();updateMonth();
 setInterval(updateClock,1000);
 setInterval(updateCurrent,30000);
 setInterval(updateHour,300000);
