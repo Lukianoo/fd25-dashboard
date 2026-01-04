@@ -57,15 +57,6 @@ button{
 #historyBtn { background-color: #ef6c00; color: #fff; }
 #monthHistoryBtn { background-color: #1565c0; color: #fff; }
 #totalHistoryBtn { background-color: #2e7d32; color: #fff; }
-#fullscreenBtn {
-  background-color: #6a1b9a; /* tmavě fialová */
-  color: #fff;
-}
-
-#fullscreenBtn:hover {
-  opacity: 0.85;
-}
-  
 #historyBtn:hover,
 #monthHistoryBtn:hover,
 #totalHistoryBtn:hover { opacity: 0.85; }
@@ -111,7 +102,10 @@ footer img:hover{
 
 <header>
   <div id="clock"></div>
-  <div>Attack FD 25 AUTOMAT– PANEL KOTELNY</div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    Attack FD 25 AUTOMAT - PANEL KOTELNY
+    <button id="fullscreenBtn" style="padding:6px 12px;font-size:14px;border-radius:8px;background:#6a1b9a;color:#fff;border:none;cursor:pointer;">⛶ Fullscreen</button>
+  </div>
 </header>
 
 <main>
@@ -144,8 +138,6 @@ footer img:hover{
   <button id="historyBtn">📅 Denní historie spotřeby</button>
   <button id="monthHistoryBtn">📆 Měsíční historie spotřeby</button>
   <button id="totalHistoryBtn">📈 Celková historie spotřeby</button>
-  <button id="fullscreenBtn">⛶ Fullscreen</button>
-
 </div>
 </div>
 
@@ -342,15 +334,26 @@ totalHistoryBtn.onclick = async () => {
     </tr>
   `;
 };
+
+kg10min.oninput=()=>{localStorage.kg10min=kg10min.value;updateHour();updateDay();updateMonth();}
+priceKg.oninput=()=>{localStorage.priceKg=priceKg.value;updateDay();updateMonth();}
+
+updateClock();updateCurrent();updateHour();updateDay();updateMonth();
+setInterval(updateClock,1000);
+setInterval(updateCurrent,30000);
+setInterval(updateHour,300000);
+setInterval(updateDay,900000);
+setInterval(updateMonth,1800000);
+
 fullscreenBtn.onclick = () => {
   const elem = document.documentElement; // celý dokument
-  if (!document.fullscreenElement) {
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
     // Zapnutí fullscreen
     if (elem.requestFullscreen) {
       elem.requestFullscreen();
-    } else if (elem.webkitRequestFullscreen) { /* Safari / iOS */
-      elem.webkitRequestFullscreen();
-    } else if (elem.msRequestFullscreen) { /* IE/Edge */
+    } else if (elem.webkitRequestFullscreen) { // iOS Safari
+      elem.webkitRequestFullscreen({ navigationUI: "hide" });
+    } else if (elem.msRequestFullscreen) { // IE/Edge
       elem.msRequestFullscreen();
     }
   } else {
@@ -365,16 +368,6 @@ fullscreenBtn.onclick = () => {
   }
 };
   
-
-kg10min.oninput=()=>{localStorage.kg10min=kg10min.value;updateHour();updateDay();updateMonth();}
-priceKg.oninput=()=>{localStorage.priceKg=priceKg.value;updateDay();updateMonth();}
-
-updateClock();updateCurrent();updateHour();updateDay();updateMonth();
-setInterval(updateClock,1000);
-setInterval(updateCurrent,30000);
-setInterval(updateHour,300000);
-setInterval(updateDay,900000);
-setInterval(updateMonth,1800000);
 </script>
 
 <footer style="text-align:center;margin:40px 0 20px;opacity:.85">
