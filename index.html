@@ -90,6 +90,7 @@ th{background:#eee}
 <br>
 <button id="historyBtn">📅 Denní historie spotřeby</button>
 <button id="monthHistoryBtn">📆 Měsíční historie spotřeby</button>
+  <button id="totalHistoryBtn">📈 Celková historie spotřeby</button>
 </div>
 
 <div id="historyBox" class="card" style="display:none;margin-top:20px">
@@ -106,19 +107,20 @@ th{background:#eee}
   </table>
 </div>
 
-<div id="monthHistoryBox" class="card" style="display:none;margin-top:20px">
-  <h2>📊 Měsíční historie – uhlí & cena</h2>
+<div id="totalHistoryBox" class="card" style="display:none;margin-top:20px">
+  <h2>📈 Celková historie – od začátku měření</h2>
   <table>
     <thead>
       <tr>
-        <th>Měsíc</th>
+        <th>Období</th>
         <th>Spotřeba (kg)</th>
         <th>Cena (Kč)</th>
       </tr>
     </thead>
-    <tbody id="monthHistoryTable"></tbody>
+    <tbody id="totalHistoryTable"></tbody>
   </table>
 </div>
+
 
 <br>
 
@@ -247,6 +249,30 @@ monthHistoryBtn.onclick=async()=>{
       monthHistoryTable.innerHTML+=`<tr><td>${s.toLocaleDateString("cs-CZ",{month:"long",year:"numeric"})}</td><td>${kg.toFixed(1)}</td><td>${(kg*price).toFixed(0)}</td></tr>`;
     }
   }
+};
+totalHistoryBtn.onclick = async () => {
+  totalHistoryBox.style.display =
+    totalHistoryBox.style.display === "none" ? "block" : "none";
+
+  totalHistoryTable.innerHTML = "";
+
+  const price = +priceKg.value || 6.2;
+
+  // vezmeme úplně první a poslední záznam
+  const f = await fetchFeeds("results=8000");
+  if (f.length < 2) return;
+
+  const sec = f.at(-1).field8 - f[0].field8;
+  const kg = secToKg(sec);
+  const cost = kg * price;
+
+  totalHistoryTable.innerHTML = `
+    <tr>
+      <td>Celé období (${new Date(f[0].created_at).toLocaleDateString("cs-CZ")} – ${new Date(f.at(-1).created_at).toLocaleDateString("cs-CZ")})</td>
+      <td>${kg.toFixed(1)}</td>
+      <td>${cost.toFixed(0)}</td>
+    </tr>
+  `;
 };
 
 kg10min.oninput=()=>{localStorage.kg10min=kg10min.value;updateHour();updateDay();updateMonth();}
