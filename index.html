@@ -100,11 +100,20 @@ footer img:hover{
 
 <body>
 
-<header>
-  <div id="clock"></div>
-  <div style="display:flex;align-items:center;gap:10px;">
-    Attack FD 25 AUTOMAT - PANEL KOTELNY
-    <button id="fullscreenBtn" style="padding:6px 12px;font-size:14px;border-radius:8px;background:#6a1b9a;color:#fff;border:none;cursor:pointer;">⛶ Fullscreen</button>
+<header style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:15px 20px;background:#000;color:#fff;">
+  <!-- hodiny vlevo -->
+  <div id="clock" style="font-size:14px;"></div>
+
+  <!-- název doprostřed -->
+  <div style="flex:1;text-align:center;font-size:20px;font-weight:700;">
+    Attack FD 25 AUTOMAT – PANEL KOTELNY
+  </div>
+
+  <!-- fullscreen tlačítko napravo -->
+  <div>
+    <button id="fullscreenBtn" style="padding:6px 12px;font-size:14px;border-radius:8px;background:#6a1b9a;color:#fff;border:none;cursor:pointer;">
+      ⛶ Fullscreen
+    </button>
   </div>
 </header>
 
