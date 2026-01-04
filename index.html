@@ -151,6 +151,14 @@ th{
   <div class="card"><h2>🌡️ Venku</h2><div class="value" id="tVenku">--</div></div>
   <div class="card"><h2>⏱️ Podavač celkem h</h2><div class="value" id="feedTotal">--</div></div>
 </div>
+<div class="card">
+  <h2>📦 Celkem od začátku</h2>
+  <div class="value blue" id="kgTotalAll">0 kg</div>
+  <div class="sub">Cena celkem</div>
+  <div class="value green" id="costTotalAll">0 Kč</div>
+  <br>
+  <button id="resetTotalAllBtn">♻️ Vynulovat</button>
+</div>
 
 <br>
 
@@ -239,6 +247,8 @@ priceKg.value = localStorage.priceKg || 6.2;
 
 let dayChartInstance = null;
 let monthChartInstance = null;
+let totalAllOffset = Number(localStorage.totalAllOffset || 0);
+  
 let totalChartInstance = null;
 let totalOffset = localStorage.totalOffset || 0; // pro vynulování
 
@@ -265,6 +275,21 @@ async function updateCurrent(){
 async function updateHour(){ const f=await fetchFeeds("minutes=60&results=120"); if(f.length<2)return; const kg=secToKg(f.at(-1).field8-f[0].field8); kgHour.textContent=kg.toFixed(2)+" kg"; powerKWbig.textContent=(kg*ENERGY*EFF).toFixed(1)+" kWh"; }
 async function updateDay(){ const f=await fetchFeeds("start="+todayStartISO()+"&results=2000"); if(f.length<2)return; const kg=secToKg(f.at(-1).field8-f[0].field8); kgDay.textContent=kg.toFixed(2)+" kg"; costDay.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč"; }
 async function updateMonth(){ const f=await fetchFeeds("start="+monthStartISO()+"&results=3000"); if(f.length<2)return; const kg=secToKg(f.at(-1).field8-f[0].field8); kgMonth.textContent=kg.toFixed(0)+" kg"; costMonth.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč"; }
+  async function updateTotalAll(){
+  const feeds = await fetchFeeds("results=3000");
+  if(feeds.length < 2) return;
+
+  const first = +feeds[0].field8 || 0;
+  const last  = +feeds.at(-1).field8 || 0;
+
+  const secTotal = Math.max(0, last - first - totalAllOffset);
+  const kg = secToKg(secTotal);
+  const cost = kg * (+priceKg.value || 6.2);
+
+  kgTotalAll.textContent = kg.toFixed(1) + " kg";
+  costTotalAll.textContent = cost.toFixed(0) + " Kč";
+}
+
 async function updateTotalHistory(){
   const feeds = await fetchFeeds("results=3000"); // nejdelší možné
   if(feeds.length<2) return;
@@ -349,6 +374,19 @@ monthHistoryBtn.onclick = async () => {
   if(monthChartInstance) monthChartInstance.destroy();
   const ctx=document.getElementById('monthChart').getContext('2d');
   monthChartInstance=new Chart(ctx,{type:'line',data:{labels:labels,datasets:[{label:'Spotřeba (kg)',data:dataKg,backgroundColor:'rgba(46,125,50,0.2)',borderColor:'#2e7d32',fill:true,tension:0.3,pointRadius:5} ]},options:{responsive:true,plugins:{legend:{display:true}},scales:{y:{beginAtZero:true}}}});
+  resetTotalAllBtn.onclick = async () => {
+  if(!confirm("Opravdu vynulovat celkovou spotřebu?")) return;
+
+  const feeds = await fetchFeeds("results=1");
+  if(!feeds.length) return;
+
+  const currentSec = +feeds[0].field8 || 0;
+  totalAllOffset = currentSec;
+  localStorage.totalAllOffset = totalAllOffset;
+
+  updateTotalAll();
+};
+
 };
 resetTotalBtn.onclick = () => {
   if(confirm("Opravdu chcete vynulovat celkovou spotřebu?")){
@@ -361,9 +399,11 @@ resetTotalBtn.onclick = () => {
   }
 };
 
-kg10min.oninput=()=>{ localStorage.kg10min=kg10min.value; updateHour(); updateDay(); updateMonth();updateTotalHistory();
+kg10min.oninput=()=>{ localStorage.kg10min=kg10min.value; updateHour(); updateDay(); updateMonth();updateTotalHistory();updateTotalAll();
+
  }
-priceKg.oninput=()=>{ localStorage.priceKg=priceKg.value; updateDay(); updateMonth();updateTotalHistory();
+priceKg.oninput=()=>{ localStorage.priceKg=priceKg.value; updateDay(); updateMonth();updateTotalHistory();updateTotalAll();
+
  }
 
 fsBtn.onclick=()=>{ if(!document.fullscreenElement){ document.documentElement.requestFullscreen(); fsBtn.textContent="⛶×"; } else{ document.exitFullscreen(); fsBtn.textContent="⛶"; } }
@@ -375,6 +415,8 @@ setInterval(updateCurrent,30000);
 setInterval(updateHour,300000);
 setInterval(updateDay,900000);
 setInterval(updateMonth,1800000);
+  updateTotalAll();
+
 </script>
 
 </body>
