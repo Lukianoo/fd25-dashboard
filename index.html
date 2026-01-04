@@ -19,6 +19,7 @@ header{
   padding:15px 20px;
   display:flex;
   justify-content:space-between;
+  flex-wrap: wrap;
 }
 main{max-width:1400px;margin:auto;padding:20px}
 .grid{
@@ -48,19 +49,45 @@ button{
   background:#1e3c72;
   color:#fff;
   cursor:pointer;
+  width:100%;         /* tlačítka zabírají celou šířku */
+  margin-bottom:10px; /* mezera mezi tlačítky */
+  box-sizing:border-box;
 }
 table{width:100%;border-collapse:collapse}
 th,td{padding:8px;text-align:center}
 th{background:#eee}
-  footer img{
+footer img{
   transition: .3s;
 }
-
 footer img:hover{
   transform: scale(1.03);
   opacity: 1;
 }
 
+/* mobilní úpravy */
+@media (max-width: 600px) {
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px 15px;
+  }
+  main {
+    padding: 10px;
+  }
+  .card {
+    padding: 15px;
+  }
+  h2 { font-size: 14px; }
+  .value { font-size: 24px; }
+  .sub { font-size: 12px; }
+  .settings { grid-template-columns:1fr; }
+  .grid { grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); }
+  #historyBox table, #totalHistoryBox table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
 </style>
 </head>
 
@@ -97,9 +124,11 @@ footer img:hover{
 </div>
 
 <br>
-<button id="historyBtn">📅 Denní historie spotřeby</button>
-<button id="monthHistoryBtn">📆 Měsíční historie spotřeby</button>
+<div class="buttons-wrapper">
+  <button id="historyBtn">📅 Denní historie spotřeby</button>
+  <button id="monthHistoryBtn">📆 Měsíční historie spotřeby</button>
   <button id="totalHistoryBtn">📈 Celková historie spotřeby</button>
+</div>
 </div>
 
 <div id="historyBox" class="card" style="display:none;margin-top:20px">
@@ -129,7 +158,6 @@ footer img:hover{
     <tbody id="totalHistoryTable"></tbody>
   </table>
 </div>
-
 
 <br>
 
@@ -259,6 +287,7 @@ monthHistoryBtn.onclick=async()=>{
     }
   }
 };
+
 totalHistoryBtn.onclick = async () => {
   totalHistoryBox.style.display =
     totalHistoryBox.style.display === "none" ? "block" : "none";
@@ -267,7 +296,6 @@ totalHistoryBtn.onclick = async () => {
 
   const price = +priceKg.value || 6.2;
 
-  // vezmeme úplně první a poslední záznam
   const f = await fetchFeeds("results=8000");
   if (f.length < 2) return;
 
@@ -294,6 +322,7 @@ setInterval(updateHour,300000);
 setInterval(updateDay,900000);
 setInterval(updateMonth,1800000);
 </script>
+
 <footer style="text-align:center;margin:40px 0 20px;opacity:.85">
   <img 
     src="https://raw.githubusercontent.com/Lukianoo/fd25-dashboard/main/logo-elektroservis.png"
