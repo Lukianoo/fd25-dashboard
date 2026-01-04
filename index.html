@@ -100,13 +100,17 @@ footer img:hover{
 
 <body>
 
-<header style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:15px 20px;background:#000;color:#fff;">
-  <!-- hodiny vlevo -->
-  <div id="clock" style="font-size:25px;"></div>
+<header style="display:flex;align-items:center;justify-content:space-between;padding:15px 20px;background:#000;color:#fff;flex-wrap:wrap;">
 
-  <!-- název doprostřed -->
-  <div style="flex:1;text-align:center;font-size:25px;font-weight:700;">
-    Attack FD 25 AUTOMAT – PANEL KOTELNY
+  <!-- levý spacer / hodiny (nebo prázdné, pokud chceš hodiny jinde) -->
+  <div id="clock" style="font-size:16px;"></div>
+
+  <!-- logo + název doprostřed -->
+  <div style="display:flex;align-items:center;gap:10px;flex:1;justify-content:center;">
+    <img src="https://raw.githubusercontent.com/Lukianoo/fd25-dashboard/main/logo-elektroservis.png"
+         alt="Elektroservis logo"
+         style="max-width:60px;width:100%;">
+    <span style="font-size:22px;font-weight:700;">Attack FD 25 AUTOMAT – PANEL KOTELNY</span>
   </div>
 
   <!-- fullscreen tlačítko napravo -->
@@ -115,6 +119,7 @@ footer img:hover{
       ⛶ Fullscreen
     </button>
   </div>
+
 </header>
 
 <main>
