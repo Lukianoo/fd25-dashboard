@@ -57,6 +57,15 @@ button{
 #historyBtn { background-color: #ef6c00; color: #fff; }
 #monthHistoryBtn { background-color: #1565c0; color: #fff; }
 #totalHistoryBtn { background-color: #2e7d32; color: #fff; }
+#fullscreenBtn {
+  background-color: #6a1b9a; /* tmavě fialová */
+  color: #fff;
+}
+
+#fullscreenBtn:hover {
+  opacity: 0.85;
+}
+  
 #historyBtn:hover,
 #monthHistoryBtn:hover,
 #totalHistoryBtn:hover { opacity: 0.85; }
@@ -135,6 +144,8 @@ footer img:hover{
   <button id="historyBtn">📅 Denní historie spotřeby</button>
   <button id="monthHistoryBtn">📆 Měsíční historie spotřeby</button>
   <button id="totalHistoryBtn">📈 Celková historie spotřeby</button>
+  <button id="fullscreenBtn">⛶ Fullscreen</button>
+
 </div>
 </div>
 
@@ -331,6 +342,29 @@ totalHistoryBtn.onclick = async () => {
     </tr>
   `;
 };
+fullscreenBtn.onclick = () => {
+  const elem = document.documentElement; // celý dokument
+  if (!document.fullscreenElement) {
+    // Zapnutí fullscreen
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) { /* Safari / iOS */
+      elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) { /* IE/Edge */
+      elem.msRequestFullscreen();
+    }
+  } else {
+    // Vypnutí fullscreen
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+  }
+};
+  
 
 kg10min.oninput=()=>{localStorage.kg10min=kg10min.value;updateHour();updateDay();updateMonth();}
 priceKg.oninput=()=>{localStorage.priceKg=priceKg.value;updateDay();updateMonth();}
