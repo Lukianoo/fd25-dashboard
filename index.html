@@ -324,7 +324,7 @@ historyBtn.onclick=async()=>{
 
     if(f.length>1){
       const kg=secToKg(f.at(-1).field8-f[0].field8);
-      historyTable.innerHTML+=`<tr><td>${d1.toLocaleDateString("cs-CZ")}</td><td>${kg.toFixed(2)}</td><td>${(kg*price).toFixed(0)}</td></tr>`;
+      historyTable.innerHTML+=`<tr><td>${d1.toLocaleDateString("cs-CZ")}</td><td>${kg.toFixed(0)}</td><td>${(kg*price).toFixed(0)}</td></tr>`;
     }
   }
 };
