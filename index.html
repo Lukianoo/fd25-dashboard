@@ -234,8 +234,11 @@ function secToKg(sec){
 }
 
 function todayStartISO(){
-  const d=new Date();d.setHours(0,0,0,0);return d.toISOString();
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  return localISO(d);
 }
+
 
 function localISO(d){
   const z = n => String(n).padStart(2,"0");
@@ -317,7 +320,8 @@ historyBtn.onclick=async()=>{
   for(let i=0;i<14;i++){
     const d1=new Date();d1.setDate(d1.getDate()-i);d1.setHours(0,0,0,0);
     const d2=new Date(d1);d2.setDate(d2.getDate()+1);
-    const f=await fetchFeeds(`start=${d1.toISOString()}&end=${d2.toISOString()}&results=2000`);
+   const f = await fetchFeeds(`start=${localISO(d1)}&end=${localISO(d2)}&results=2000`);
+
     if(f.length>1){
       const kg=secToKg(f.at(-1).field8-f[0].field8);
       historyTable.innerHTML+=`<tr><td>${d1.toLocaleDateString("cs-CZ")}</td><td>${kg.toFixed(2)}</td><td>${(kg*price).toFixed(0)}</td></tr>`;
