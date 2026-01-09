@@ -348,7 +348,7 @@ monthHistoryBtn.onclick = async () => {
       const kg = secToKg(f.at(-1).field8 - f[0].field8);
       monthHistoryTable.innerHTML += `<tr>
         <td>${s.toLocaleDateString("cs-CZ", { month: "long", year: "numeric" })}</td>
-        <td>${kg.toFixed(1)}</td>
+        <td>${kg.toFixed(0)}</td>
         <td>${(kg * price).toFixed(0)}</td>
       </tr>`;
     }
