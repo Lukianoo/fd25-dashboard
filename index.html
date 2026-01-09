@@ -304,7 +304,7 @@ async function updateMonth(){
   const sec = f.at(-1).field8 - f[0].field8;
   const kg = secToKg(sec);
 
-  kgMonth.textContent = kg.toFixed(1) + " kg";
+  kgMonth.textContent = kg.toFixed(0) + " kg";
   costMonth.textContent =
     (kg * (+priceKg.value || 6.2)).toFixed(0) + " Kč";
 }
