@@ -237,9 +237,18 @@ function todayStartISO(){
   const d=new Date();d.setHours(0,0,0,0);return d.toISOString();
 }
 
-function monthStartISO(){
-  const d=new Date();d.setDate(1);d.setHours(0,0,0,0);return d.toISOString();
+function localISO(d){
+  const z = n => String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;
 }
+
+function monthStartISO(){
+  const d = new Date();
+  d.setDate(1);
+  d.setHours(0,0,0,0);
+  return localISO(d);
+}
+
 
 async function fetchFeeds(p){
   try{
@@ -283,12 +292,23 @@ async function updateDay(){
 }
 
 async function updateMonth(){
-  const f=await fetchFeeds("start="+monthStartISO()+"&results=3000");
-  if(f.length<2)return;
-  const kg=secToKg(f.at(-1).field8-f[0].field8);
-  kgMonth.textContent=kg.toFixed(0)+" kg";
-  costMonth.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
+  const f = await fetchFeeds(
+    "start=" + monthStartISO() + "&results=8000"
+  );
+  if(f.length < 2){
+    kgMonth.textContent = "0 kg";
+    costMonth.textContent = "0 Kč";
+    return;
+  }
+
+  const sec = f.at(-1).field8 - f[0].field8;
+  const kg = secToKg(sec);
+
+  kgMonth.textContent = kg.toFixed(1) + " kg";
+  costMonth.textContent =
+    (kg * (+priceKg.value || 6.2)).toFixed(0) + " Kč";
 }
+
 
 historyBtn.onclick=async()=>{
   historyBox.style.display=historyBox.style.display==="none"?"block":"none";
