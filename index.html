@@ -290,7 +290,7 @@ async function updateDay(){
   const f=await fetchFeeds("start="+todayStartISO()+"&results=2000");
   if(f.length<2)return;
   const kg=secToKg(f.at(-1).field8-f[0].field8);
-  kgDay.textContent=kg.toFixed(2)+" kg";
+  kgDay.textContent=kg.toFixed(0)+" kg";
   costDay.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
 }
 
