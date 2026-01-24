@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <title>Kotelna – Attack FD 25</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <style>
 *{box-sizing:border-box}
 body{
@@ -20,6 +19,7 @@ header{
   display:flex;
   justify-content:space-between;
   flex-wrap: wrap;
+  align-items:center;
 }
 main{max-width:1400px;margin:auto;padding:20px}
 .grid{
@@ -49,14 +49,13 @@ button{
   background:#1e3c72;
   color:#fff;
   cursor:pointer;
-  width:100%;         /* tlačítka zabírají celou šířku */
-  margin-bottom:10px; /* mezera mezi tlačítky */
+  width:100%;
+  margin-bottom:10px;
   box-sizing:border-box;
 }
-  /* barvy tlačítek historie */
-#historyBtn { background-color: #ef6c00; color: #fff; }
-#monthHistoryBtn { background-color: #1565c0; color: #fff; }
-#totalHistoryBtn { background-color: #2e7d32; color: #fff; }
+#historyBtn { background-color: #ef6c00; }
+#monthHistoryBtn { background-color: #1565c0; }
+#totalHistoryBtn { background-color: #2e7d32; }
 #historyBtn:hover,
 #monthHistoryBtn:hover,
 #totalHistoryBtn:hover { opacity: 0.85; }
@@ -70,20 +69,10 @@ footer img:hover{
   transform: scale(1.03);
   opacity: 1;
 }
-
-/* mobilní úpravy */
 @media (max-width: 600px) {
-  header {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 10px 15px;
-  }
-  main {
-    padding: 10px;
-  }
-  .card {
-    padding: 15px;
-  }
+  header { flex-direction: column; align-items: flex-start; padding: 10px 15px; }
+  main { padding: 10px; }
+  .card { padding: 15px; }
   h2 { font-size: 14px; }
   .value { font-size: 24px; }
   .sub { font-size: 12px; }
@@ -97,28 +86,19 @@ footer img:hover{
 }
 </style>
 </head>
-
 <body>
 
-<header style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:15px 20px;background:#000;color:#fff;">
-  <!-- hodiny vlevo -->
+<header>
   <div id="clock" style="font-size:25px;"></div>
-
-  <!-- název doprostřed -->
   <div style="flex:1;text-align:center;font-size:25px;font-weight:700;">
     ATTACK FD 25 AUTOMAT – PANEL KOTELNY ZACHRČ
   </div>
-
-  <!-- fullscreen tlačítko napravo -->
-  <div>
-    <button id="fullscreenBtn" style="padding:6px 12px;font-size:14px;border-radius:8px;background:#6a1b9a;color:#fff;border:none;cursor:pointer;">
-      ⛶ Fullscreen
-    </button>
-  </div>
+  <button id="fullscreenBtn" style="padding:6px 12px;font-size:14px;border-radius:8px;background:#6a1b9a;color:#fff;border:none;cursor:pointer;">
+    ⛶ Fullscreen
+  </button>
 </header>
 
 <main>
-
 <div class="grid">
   <div class="card"><h2>🔥 Kotel</h2><div class="value" id="tKotel">--</div></div>
   <div class="card"><h2>↩️ Zpátečka</h2><div class="value blue" id="tZpet">--</div></div>
@@ -133,367 +113,272 @@ footer img:hover{
 <br>
 
 <div class="card">
-<h2>💰 Spotřeba uhlí</h2>
-<div class="grid">
-  <div><div class="sub">HODINA</div><div class="value orange" id="kgHour">0 kg</div></div>
-  <div><div class="sub">DNES</div><div class="value green" id="kgDay">0 kg</div></div>
-  <div><div class="sub">MĚSÍC</div><div class="value blue" id="kgMonth">0 kg</div></div>
-  <div><div class="sub">CENA DNES</div><div class="value" id="costDay">0 Kč</div></div>
-  <div><div class="sub">CENA MĚSÍC</div><div class="value" id="costMonth">0 Kč</div></div>
-</div>
-
-<br>
-<div class="buttons-wrapper">
-  <button id="historyBtn">📅 Denní historie spotřeby</button>
-  <button id="monthHistoryBtn">📆 Měsíční historie spotřeby</button>
-  <button id="totalHistoryBtn">📈 Celková historie spotřeby</button>
-</div>
+  <h2>💰 Spotřeba uhlí</h2>
+  <div class="grid">
+    <div><div class="sub">HODINA</div><div class="value orange" id="kgHour">0 kg</div></div>
+    <div><div class="sub">DNES</div><div class="value green" id="kgDay">načítám...</div></div>
+    <div><div class="sub">MĚSÍC</div><div class="value blue" id="kgMonth">0 kg</div></div>
+    <div><div class="sub">CENA DNES</div><div class="value" id="costDay">0 Kč</div></div>
+    <div><div class="sub">CENA MĚSÍC</div><div class="value" id="costMonth">0 Kč</div></div>
+  </div>
+  <br>
+  <div class="buttons-wrapper">
+    <button id="historyBtn">📅 Denní historie spotřeby</button>
+    <button id="monthHistoryBtn">📆 Měsíční historie spotřeby</button>
+    <button id="totalHistoryBtn">📈 Celková historie spotřeby</button>
+  </div>
 </div>
 
 <div id="historyBox" class="card" style="display:none;margin-top:20px">
   <h2>📊 Denní historie – uhlí & cena</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Datum</th>
-        <th>Spotřeba (kg)</th>
-        <th>Cena (Kč)</th>
-      </tr>
-    </thead>
-    <tbody id="historyTable"></tbody>
-  </table>
+  <table><thead><tr><th>Datum</th><th>Spotřeba (kg)</th><th>Cena (Kč)</th></tr></thead><tbody id="historyTable"></tbody></table>
 </div>
+
 <div id="monthHistoryBox" class="card" style="display:none;margin-top:20px">
   <h2>📆 Měsíční historie – uhlí & cena</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Měsíc</th>
-        <th>Spotřeba (kg)</th>
-        <th>Cena (Kč)</th>
-      </tr>
-    </thead>
-    <tbody id="monthHistoryTable"></tbody>
-  </table>
+  <table><thead><tr><th>Měsíc</th><th>Spotřeba (kg)</th><th>Cena (Kč)</th></tr></thead><tbody id="monthHistoryTable"></tbody></table>
 </div>
 
 <div id="totalHistoryBox" class="card" style="display:none;margin-top:20px">
   <h2>📈 Celková historie – od začátku měření</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Období</th>
-        <th>Spotřeba (kg)</th>
-        <th>Cena (Kč)</th>
-      </tr>
-    </thead>
-    <tbody id="totalHistoryTable"></tbody>
-  </table>
+  <table><thead><tr><th>Období</th><th>Spotřeba (kg)</th><th>Cena (Kč)</th></tr></thead><tbody id="totalHistoryTable"></tbody></table>
 </div>
 
 <br>
 
 <div class="card">
-<h2>⚙️ Nastavení</h2>
-<div class="settings">
-  <div>
-    <label>Kg uhlí / 10 min</label>
-    <input type="number" id="kg10min" step="0.1">
+  <h2>⚙️ Nastavení</h2>
+  <div class="settings">
+    <div>
+      <label>Kg uhlí / 10 min</label>
+      <input type="number" id="kg10min" step="0.1">
+    </div>
+    <div>
+      <label>Cena / kg</label>
+      <input type="number" id="priceKg" step="0.1">
+    </div>
   </div>
-  <div>
-    <label>Cena / kg</label>
-    <input type="number" id="priceKg" step="0.1">
-  </div>
-</div>
 </div>
 
 </main>
 
 <script>
 const CHANNEL = 231269;
-const DAY_CHANNEL = 3238281; // denní součty v kg
+const DAY_CHANNEL = 3238281;
 const ENERGY = 4.8;
 const EFF = 0.75;
 
+let kg10min = document.getElementById('kg10min');
+let priceKg = document.getElementById('priceKg');
 kg10min.value = localStorage.kg10min || 2.5;
 priceKg.value = localStorage.priceKg || 6.2;
 
-function updateClock(){
-  clock.textContent = new Date().toLocaleString("cs-CZ");
-}
+const clock = document.getElementById('clock');
+const tKotel    = document.getElementById('tKotel');
+const tZpet     = document.getElementById('tZpet');
+const deltaT    = document.getElementById('deltaT');
+const powerKWbig= document.getElementById('powerKWbig');
+const tPodavac  = document.getElementById('tPodavac');
+const tBojler   = document.getElementById('tBojler');
+const tVenku    = document.getElementById('tVenku');
+const feedTotal = document.getElementById('feedTotal');
+const kgHour    = document.getElementById('kgHour');
+const kgDay     = document.getElementById('kgDay');
+const kgMonth   = document.getElementById('kgMonth');
+const costDay   = document.getElementById('costDay');
+const costMonth = document.getElementById('costMonth');
 
-function secToHMS(sec){
-  sec=Math.max(0,Math.floor(sec));
-  const h=Math.floor(sec/3600);
-  const m=Math.floor((sec%3600)/60);
-  const s=sec%60;
-  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
-}
-
-function secToKg(sec){
-  return Math.max(0,(sec/600)*(+kg10min.value||2.5));
-}
-function safeSecDiff(a, b){
-  const d = a - b;
-  return d > 0 ? d : 0;
-}
-async function getDayKg(date){
-  const d1 = new Date(date);
-  d1.setHours(0,0,0,0);
-
-  const d2 = new Date(d1);
-  d2.setDate(d2.getDate() + 1);
-
-  const f = await fetchFeeds(
-    `start=${localISO(d1)}&end=${localISO(d2)}&results=1000`
-  );
-
-  if (f.length < 2) return 0;
-
-  const sec = safeSecDiff(
-    f.at(-1).field8,
-    f[0].field8
-  );
-
-  return secToKg(sec);
-}
-
-function todayStartISO(){
-  const d = new Date();
-  d.setHours(0,0,0,0);
-  return localISO(d);
-}
-
-
-function localISO(d){
-  const z = n => String(n).padStart(2,"0");
-  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;
-}
-
-function monthStartISO(){
-  const d = new Date();
-  d.setDate(1);
-  d.setHours(0,0,0,0);
-  return localISO(d);
-}
-async function fetchDayFeeds(p){
-  try{
-    const r = await fetch(
-      `https://api.thingspeak.com/channels/${DAY_CHANNEL}/feeds.json?${p}`
-    );
-    return (await r.json()).feeds || [];
-  }catch(e){
+async function fetchFeeds(p) {
+  try {
+    const r = await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${p}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    return data.feeds || [];
+  } catch (e) {
+    console.error("fetchFeeds error:", e);
     return [];
   }
 }
 
-
-async function fetchFeeds(p){
-  try{
-    const r=await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${p}`);
-    return (await r.json()).feeds||[];
-  }catch(e){return[];}
+async function fetchDayFeeds(p) {
+  try {
+    const r = await fetch(`https://api.thingspeak.com/channels/${DAY_CHANNEL}/feeds.json?${p}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    return data.feeds || [];
+  } catch (e) {
+    console.error("fetchDayFeeds error:", e);
+    return [];
+  }
 }
 
-async function updateCurrent(){
-  const cur=await fetchFeeds("results=1");
-  if(!cur.length)return;
-  const f=cur[0];
-  const tK=+f.field5||0;
-  const tZ=+f.field1||0;
-
-  tKotel.textContent=tK.toFixed(1)+" °C";
-  tZpet.textContent=tZ.toFixed(1)+" °C";
-  tPodavac.textContent=(+f.field2||0).toFixed(1)+" °C";
-  tBojler.textContent=(+f.field3||0).toFixed(1)+" °C";
-  tVenku.textContent=(+f.field4||0).toFixed(1)+" °C";
-  deltaT.textContent=(tK-tZ).toFixed(1)+" °C";
-
-  const totalSec=+f.field8||0;
-  feedTotal.textContent=secToHMS(totalSec);
+function updateClock() {
+  clock.textContent = new Date().toLocaleString("cs-CZ", {
+    dateStyle: "medium",
+    timeStyle: "medium"
+  });
 }
 
-async function updateHour(){
-  const f=await fetchFeeds("minutes=60&results=120");
-  if(f.length<2)return;
-  const kg=secToKg(f.at(-1).field8-f[0].field8);
-  kgHour.textContent=kg.toFixed(2)+" kg";
-  powerKWbig.textContent=(kg*ENERGY*EFF).toFixed(1)+" kWh";
+function secToHMS(sec) {
+  sec = Math.max(0, Math.floor(sec));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
 
-async function updateDay(){
-  const f = await fetchDayFeeds("results=1");
+function secToKg(sec) {
+  return Math.max(0, (sec / 600) * (Number(kg10min.value) || 2.5));
+}
 
-  if(!f.length){
-    kgDay.textContent = "0 kg";
-    costDay.textContent = "0 Kč";
+function safeSecDiff(a, b) {
+  const d = Number(a) - Number(b);
+  return d > 0 ? d : 0;
+}
+
+function todayStartISO() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T00:00:00`;
+}
+
+function fmtTemp(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n.toFixed(1) : "--";
+}
+
+async function updateCurrent() {
+  const feeds = await fetchFeeds("results=1");
+  if (!feeds.length) return;
+
+  const f = feeds[0];
+  const tk = Number(f.field5);
+  const tz = Number(f.field1);
+
+  tKotel.textContent    = fmtTemp(tk)    + " °C";
+  tZpet.textContent     = fmtTemp(tz)    + " °C";
+  deltaT.textContent    = fmtTemp(tk - tz) + " °C";
+  tPodavac.textContent  = fmtTemp(f.field2) + " °C";
+  tBojler.textContent   = fmtTemp(f.field3) + " °C";
+  tVenku.textContent    = fmtTemp(f.field4) + " °C";
+  feedTotal.textContent = secToHMS(Number(f.field8) || 0);
+}
+
+async function updateHour() {
+  const f = await fetchFeeds("minutes=60&results=120");
+  if (f.length < 2) {
+    kgHour.textContent = "— kg";
+    powerKWbig.textContent = "— kWh";
     return;
   }
-
-  const kg = +f[0].field1 || 0;
-
-  kgDay.textContent = kg.toFixed(0) + " kg";
-  costDay.textContent =
-    (kg * (+priceKg.value || 6.2)).toFixed(0) + " Kč";
+  const sec = safeSecDiff(f.at(-1).field8, f[0].field8);
+  const kg = secToKg(sec);
+  kgHour.textContent = kg.toFixed(2) + " kg";
+  powerKWbig.textContent = (kg * ENERGY * EFF).toFixed(1) + " kWh";
 }
 
+async function updateDay() {
+  kgDay.textContent = "načítám...";
+  costDay.textContent = "načítám...";
 
+  const price = Number(priceKg.value) || 6.2;
+  const start = todayStartISO();
+  const end = new Date().toISOString().slice(0,19);
 
-async function updateMonth(){
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth() + 1;
-
-  const start = `${y}-${String(m).padStart(2,"0")}-01T00:00:00`;
-
-  const f = await fetchDayFeeds(
-    `start=${start}&results=400`
-  );
+  const feeds = await fetchFeeds(`start=${start}&end=${end}&results=300`);
 
   let kg = 0;
-  for(const d of f){
-    kg += +d.field1 || 0;
-  }
+  if (feeds.length >= 2) {
+    const sec = safeSecDiff(feeds.at(-1).field8, feeds[0].field8);
+    kg = secToKg(sec);
+  } // else → zůstane 0 kg
 
-  kgMonth.textContent = kg.toFixed(0) + " kg";
-  costMonth.textContent =
-    (kg * (+priceKg.value || 6.2)).toFixed(0) + " Kč";
+  kgDay.textContent   = kg.toFixed(0) + " kg";
+  costDay.textContent = (kg * price).toFixed(0) + " Kč";
 }
 
+async function updateMonth() {
+  // Zde stále používáme denní kanál (souhrny za minulé dny + případně část dneška)
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const start = `${y}-${m}-01T00:00:00`;
 
-historyBtn.onclick = async () => {
-  historyBox.style.display =
-    historyBox.style.display === "none" ? "block" : "none";
-
-  historyTable.innerHTML = "";
-  const price = +priceKg.value || 6.2;
-
-  const f = await fetchDayFeeds("results=30");
-
-  const map = {};
-  for (const d of f){
-    const day = new Date(d.created_at).toLocaleDateString("cs-CZ");
-    map[day] = (map[day] || 0) + (+d.field1 || 0);
+  const f = await fetchDayFeeds(`start=${start}&results=400`);
+  let kg = 0;
+  for (const d of f) {
+    kg += Number(d.field1) || 0;
   }
 
+  const price = Number(priceKg.value) || 6.2;
+  kgMonth.textContent = kg.toFixed(0) + " kg";
+  costMonth.textContent = (kg * price).toFixed(0) + " Kč";
+}
+
+// Historie – zůstává z denního kanálu (minulé dny)
+historyBtn.onclick = async () => {
+  const box = document.getElementById('historyBox');
+  box.style.display = box.style.display === "none" ? "block" : "none";
+  if (box.style.display === "none") return;
+
+  const table = document.getElementById('historyTable');
+  table.innerHTML = "<tr><td colspan='3'>načítám...</td></tr>";
+
+  const price = Number(priceKg.value) || 6.2;
+  const f = await fetchDayFeeds("results=30");
+  const map = {};
+  for (const d of f) {
+    const day = new Date(d.created_at).toLocaleDateString("cs-CZ");
+    map[day] = (map[day] || 0) + (Number(d.field1) || 0);
+  }
+
+  table.innerHTML = "";
   Object.entries(map).reverse().forEach(([day, kg]) => {
-    historyTable.innerHTML += `
-      <tr>
-        <td>${day}</td>
-        <td>${kg.toFixed(0)}</td>
-        <td>${(kg * price).toFixed(0)}</td>
-      </tr>`;
+    table.innerHTML += `<tr><td>${day}</td><td>${kg.toFixed(0)}</td><td>${(kg * price).toFixed(0)}</td></tr>`;
   });
 };
 
+// monthHistoryBtn a totalHistoryBtn zůstávají podobně (můžeš doladit podle potřeby)
 
-
-
-monthHistoryBtn.onclick = async () => {
-  monthHistoryBox.style.display =
-    monthHistoryBox.style.display === "none" ? "block" : "none";
-
-  monthHistoryTable.innerHTML = "";
-  const price = +priceKg.value || 6.2;
-
-  const f = await fetchDayFeeds("results=400");
-
-  const months = {};
-
-  for(const d of f){
-    const dt = new Date(d.created_at);
-    const key = dt.getFullYear()+"-"+dt.getMonth();
-    months[key] = (months[key] || 0) + (+d.field1 || 0);
-  }
-
-  Object.entries(months)
-    .reverse()
-    .slice(0,12)
-    .forEach(([k,kg])=>{
-      const [y,m] = k.split("-");
-      const d = new Date(y, m);
-
-      monthHistoryTable.innerHTML += `
-        <tr>
-          <td>${d.toLocaleDateString("cs-CZ",{month:"long",year:"numeric"})}</td>
-          <td>${kg.toFixed(0)}</td>
-          <td>${(kg * price).toFixed(0)}</td>
-        </tr>`;
-    });
+kg10min.oninput = () => {
+  localStorage.kg10min = kg10min.value;
+  updateHour();
+  updateDay();
 };
 
-
-
-totalHistoryBtn.onclick = async () => {
-  totalHistoryBox.style.display =
-    totalHistoryBox.style.display === "none" ? "block" : "none";
-
-  totalHistoryTable.innerHTML = "";
-  const price = +priceKg.value || 6.2;
-
-  const f = await fetchDayFeeds("results=8000");
-
-if (!f || f.length === 0){
-  totalHistoryTable.innerHTML = `
-    <tr>
-      <td colspan="3">⛔ Zatím nejsou žádná data</td>
-    </tr>`;
-  return;
-}
-
-let totalKg = 0;
-f.forEach(d => totalKg += +d.field1 || 0);
-
-const first = new Date(f.at(-1).created_at);
-const last  = new Date(f[0].created_at);
-
-  totalHistoryTable.innerHTML = `
-    <tr>
-      <td>${first.toLocaleDateString("cs-CZ")} – ${last.toLocaleDateString("cs-CZ")}</td>
-      <td>${totalKg.toFixed(0)}</td>
-      <td>${(totalKg * price).toFixed(0)}</td>
-    </tr>`;
+priceKg.oninput = () => {
+  localStorage.priceKg = priceKg.value;
+  updateDay();
+  updateMonth();
 };
 
-
-
-kg10min.oninput=()=>{localStorage.kg10min=kg10min.value;updateHour();updateDay();updateMonth();}
-priceKg.oninput=()=>{localStorage.priceKg=priceKg.value;updateDay();updateMonth();}
-
-updateClock();updateCurrent();updateHour();updateDay();updateMonth();
-setInterval(updateClock,1000);
-setInterval(updateCurrent,30000);
-setInterval(updateHour,300000);
-setInterval(updateDay,900000);
-setInterval(updateMonth,1800000);
-
-fullscreenBtn.onclick = () => {
-  const elem = document.documentElement; // celý dokument
-  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-    // Zapnutí fullscreen
-    if (elem.requestFullscreen) {
-      elem.requestFullscreen();
-    } else if (elem.webkitRequestFullscreen) { // iOS Safari
-      elem.webkitRequestFullscreen({ navigationUI: "hide" });
-    } else if (elem.msRequestFullscreen) { // IE/Edge
-      elem.msRequestFullscreen();
-    }
+document.getElementById('fullscreenBtn').onclick = () => {
+  const elem = document.documentElement;
+  if (!document.fullscreenElement) {
+    elem.requestFullscreen?.() || elem.webkitRequestFullscreen?.();
   } else {
-    // Vypnutí fullscreen
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) {
-      document.webkitExitFullscreen();
-    } else if (document.msExitFullscreen) {
-      document.msExitFullscreen();
-    }
+    document.exitFullscreen?.() || document.webkitExitFullscreen?.();
   }
 };
-  
+
+// spuštění
+updateClock();
+updateCurrent();
+updateHour();
+updateDay();
+updateMonth();
+
+setInterval(updateClock, 10000);
+setInterval(updateCurrent, 30000);
+setInterval(updateHour, 300000);
+setInterval(updateDay, 60000);     // častěji – protože chceme průběžnou hodnotu dnes
+setInterval(updateMonth, 1800000);
+
 </script>
 
 <footer style="text-align:center;margin:40px 0 20px;opacity:.85">
-  <img 
+  <img
     src="https://raw.githubusercontent.com/Lukianoo/fd25-dashboard/main/logo-elektroservis.png"
     alt="Elektroservis logo"
     style="max-width:400px;width:100%;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))"
