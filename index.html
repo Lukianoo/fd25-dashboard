@@ -285,17 +285,27 @@ async function updateHour(){
   powerKWbig.textContent=(kg*ENERGY*EFF).toFixed(1)+" kWh";
 }
 async function updateDay(){
-  const f = await fetchDayFeeds("results=1");
-  if(!f.length){
+  // Začátek dne
+  const start = todayStartISO();
+  const now = new Date();
+  const end = localISO(now);
+
+  // Stáhnout feedy z kanálu 231269 mezi 0:00 a aktuálně
+  const f = await fetchFeeds(`start=${start}&end=${end}&results=1000`);
+  if(f.length < 2){
     kgDay.textContent = "0 kg";
     costDay.textContent = "0 Kč";
     return;
   }
-  const kg = +f[0].field1 || 0;
-  kgDay.textContent = kg.toFixed(0) + " kg";
-  costDay.textContent =
-    (kg * (+priceKg.value || 6.2)).toFixed(0) + " Kč";
+
+  // Rozdíl field8 (sekundy podavače)
+  const sec = safeSecDiff(f.at(-1).field8, f[0].field8);
+  const kg = secToKg(sec);
+
+  kgDay.textContent = kg.toFixed(2) + " kg";
+  costDay.textContent = (kg * (+priceKg.value || 6.2)).toFixed(0) + " Kč";
 }
+
 async function updateMonth(){
   const now = new Date();
   const y = now.getFullYear();
