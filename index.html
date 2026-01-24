@@ -18,8 +18,8 @@ header{
   padding:15px 20px;
   display:flex;
   justify-content:space-between;
-  flex-wrap: wrap;
   align-items:center;
+  flex-wrap:wrap;
 }
 main{max-width:1400px;margin:auto;padding:20px}
 .grid{
@@ -46,59 +46,54 @@ button{
   font-size:15px;
   border-radius:10px;
   border:none;
-  background:#1e3c72;
   color:#fff;
   cursor:pointer;
   width:100%;
   margin-bottom:10px;
   box-sizing:border-box;
 }
-#historyBtn { background-color: #ef6c00; }
-#monthHistoryBtn { background-color: #1565c0; }
-#totalHistoryBtn { background-color: #2e7d32; }
-#historyBtn:hover,
-#monthHistoryBtn:hover,
-#totalHistoryBtn:hover { opacity: 0.85; }
+#historyBtn     { background:#ef6c00; }
+#monthHistoryBtn { background:#1565c0; }
+#totalHistoryBtn { background:#2e7d32; }
+button:hover { opacity:0.88; }
 table{width:100%;border-collapse:collapse}
-th,td{padding:8px;text-align:center}
-th{background:#eee}
+th,td{padding:9px 6px;text-align:center}
+th{background:#f5f5f5}
+footer{text-align:center;margin:40px 0 20px;opacity:0.85}
 footer img{
-  transition: .3s;
+  max-width:400px;
+  width:100%;
+  transition:.3s;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.4));
 }
-footer img:hover{
-  transform: scale(1.03);
-  opacity: 1;
-}
-@media (max-width: 600px) {
-  header { flex-direction: column; align-items: flex-start; padding: 10px 15px; }
-  main { padding: 10px; }
-  .card { padding: 15px; }
-  h2 { font-size: 14px; }
-  .value { font-size: 24px; }
-  .sub { font-size: 12px; }
-  .settings { grid-template-columns:1fr; }
-  .grid { grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); }
-  #historyBox table, #totalHistoryBox table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
+footer img:hover{transform:scale(1.03)}
+@media (max-width:600px){
+  header{flex-direction:column;align-items:flex-start;padding:10px 15px}
+  main{padding:10px}
+  .card{padding:15px}
+  h2{font-size:14px}
+  .value{font-size:24px}
+  .sub{font-size:12px}
+  .settings{grid-template-columns:1fr}
+  .grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  table{display:block;overflow-x:auto;white-space:nowrap}
 }
 </style>
 </head>
 <body>
 
 <header>
-  <div id="clock" style="font-size:25px;"></div>
-  <div style="flex:1;text-align:center;font-size:25px;font-weight:700;">
+  <div id="clock" style="font-size:25px;min-width:180px"></div>
+  <div style="flex:1;text-align:center;font-size:25px;font-weight:700">
     ATTACK FD 25 AUTOMAT – PANEL KOTELNY ZACHRČ
   </div>
-  <button id="fullscreenBtn" style="padding:6px 12px;font-size:14px;border-radius:8px;background:#6a1b9a;color:#fff;border:none;cursor:pointer;">
+  <button id="fullscreenBtn" style="padding:6px 12px;font-size:14px;border-radius:8px;background:#6a1b9a;border:none;cursor:pointer;">
     ⛶ Fullscreen
   </button>
 </header>
 
 <main>
+
 <div class="grid">
   <div class="card"><h2>🔥 Kotel</h2><div class="value" id="tKotel">--</div></div>
   <div class="card"><h2>↩️ Zpátečka</h2><div class="value blue" id="tZpet">--</div></div>
@@ -115,18 +110,16 @@ footer img:hover{
 <div class="card">
   <h2>💰 Spotřeba uhlí</h2>
   <div class="grid">
-    <div><div class="sub">HODINA</div><div class="value orange" id="kgHour">0 kg</div></div>
+    <div><div class="sub">HODINA</div><div class="value orange" id="kgHour">— kg</div></div>
     <div><div class="sub">DNES</div><div class="value green" id="kgDay">načítám...</div></div>
-    <div><div class="sub">MĚSÍC</div><div class="value blue" id="kgMonth">0 kg</div></div>
-    <div><div class="sub">CENA DNES</div><div class="value" id="costDay">0 Kč</div></div>
-    <div><div class="sub">CENA MĚSÍC</div><div class="value" id="costMonth">0 Kč</div></div>
+    <div><div class="sub">MĚSÍC</div><div class="value blue" id="kgMonth">načítám...</div></div>
+    <div><div class="sub">CENA DNES</div><div class="value" id="costDay">— Kč</div></div>
+    <div><div class="sub">CENA MĚSÍC</div><div class="value" id="costMonth">— Kč</div></div>
   </div>
   <br>
-  <div class="buttons-wrapper">
-    <button id="historyBtn">📅 Denní historie spotřeby</button>
-    <button id="monthHistoryBtn">📆 Měsíční historie spotřeby</button>
-    <button id="totalHistoryBtn">📈 Celková historie spotřeby</button>
-  </div>
+  <button id="historyBtn">📅 Denní historie spotřeby</button>
+  <button id="monthHistoryBtn">📆 Měsíční historie spotřeby</button>
+  <button id="totalHistoryBtn">📈 Celková historie spotřeby</button>
 </div>
 
 <div id="historyBox" class="card" style="display:none;margin-top:20px">
@@ -151,11 +144,11 @@ footer img:hover{
   <div class="settings">
     <div>
       <label>Kg uhlí / 10 min</label>
-      <input type="number" id="kg10min" step="0.1">
+      <input type="number" id="kg10min" step="0.1" min="0.1">
     </div>
     <div>
       <label>Cena / kg</label>
-      <input type="number" id="priceKg" step="0.1">
+      <input type="number" id="priceKg" step="0.1" min="0">
     </div>
   </div>
 </div>
@@ -163,226 +156,286 @@ footer img:hover{
 </main>
 
 <script>
-const CHANNEL = 231269;
-const DAY_CHANNEL = 3238281;
-const ENERGY = 4.8;
-const EFF = 0.75;
+const CHANNEL       = 231269;
+const DAY_CHANNEL   = 3238281;
+const ENERGY        = 4.8;
+const EFF           = 0.75;
 
-let kg10min = document.getElementById('kg10min');
-let priceKg = document.getElementById('priceKg');
-kg10min.value = localStorage.kg10min || 2.5;
-priceKg.value = localStorage.priceKg || 6.2;
+const kg10minInput  = document.getElementById('kg10min');
+const priceKgInput  = document.getElementById('priceKg');
+kg10minInput.value  = localStorage.kg10min || 2.5;
+priceKgInput.value  = localStorage.priceKg || 6.2;
 
-const clock = document.getElementById('clock');
-const tKotel    = document.getElementById('tKotel');
-const tZpet     = document.getElementById('tZpet');
-const deltaT    = document.getElementById('deltaT');
-const powerKWbig= document.getElementById('powerKWbig');
-const tPodavac  = document.getElementById('tPodavac');
-const tBojler   = document.getElementById('tBojler');
-const tVenku    = document.getElementById('tVenku');
-const feedTotal = document.getElementById('feedTotal');
-const kgHour    = document.getElementById('kgHour');
-const kgDay     = document.getElementById('kgDay');
-const kgMonth   = document.getElementById('kgMonth');
-const costDay   = document.getElementById('costDay');
-const costMonth = document.getElementById('costMonth');
+const elements = {
+  clock:      document.getElementById('clock'),
+  tKotel:     document.getElementById('tKotel'),
+  tZpet:      document.getElementById('tZpet'),
+  deltaT:     document.getElementById('deltaT'),
+  powerKWbig: document.getElementById('powerKWbig'),
+  tPodavac:   document.getElementById('tPodavac'),
+  tBojler:    document.getElementById('tBojler'),
+  tVenku:     document.getElementById('tVenku'),
+  feedTotal:  document.getElementById('feedTotal'),
+  kgHour:     document.getElementById('kgHour'),
+  kgDay:      document.getElementById('kgDay'),
+  kgMonth:    document.getElementById('kgMonth'),
+  costDay:    document.getElementById('costDay'),
+  costMonth:  document.getElementById('costMonth'),
+};
 
-async function fetchFeeds(p) {
+async function fetchFeeds(params) {
   try {
-    const r = await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${p}`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const data = await r.json();
-    return data.feeds || [];
+    const r = await fetch(`https://api.thingspeak.com/channels/${CHANNEL}/feeds.json?${params}`);
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    return d.feeds || [];
   } catch (e) {
     console.error("fetchFeeds error:", e);
     return [];
   }
 }
 
-async function fetchDayFeeds(p) {
+async function fetchDayFeeds(params) {
   try {
-    const r = await fetch(`https://api.thingspeak.com/channels/${DAY_CHANNEL}/feeds.json?${p}`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const data = await r.json();
-    return data.feeds || [];
+    const r = await fetch(`https://api.thingspeak.com/channels/${DAY_CHANNEL}/feeds.json?${params}`);
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    return d.feeds || [];
   } catch (e) {
     console.error("fetchDayFeeds error:", e);
     return [];
   }
 }
 
-function updateClock() {
-  clock.textContent = new Date().toLocaleString("cs-CZ", {
-    dateStyle: "medium",
-    timeStyle: "medium"
-  });
-}
-
-function secToHMS(sec) {
-  sec = Math.max(0, Math.floor(sec));
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+function secToHMS(s) {
+  s = Math.max(0, Math.floor(Number(s)||0));
+  const h = Math.floor(s/3600);
+  const m = Math.floor((s%3600)/60);
+  const sec = s%60;
+  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
 }
 
 function secToKg(sec) {
-  return Math.max(0, (sec / 600) * (Number(kg10min.value) || 2.5));
+  return Math.max(0, (Number(sec)||0) / 600 * (Number(kg10minInput.value)||2.5));
 }
 
-function safeSecDiff(a, b) {
+function safeSecDiff(a,b) {
   const d = Number(a) - Number(b);
   return d > 0 ? d : 0;
 }
 
 function todayStartISO() {
   const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  const pad = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T00:00:00`;
+  d.setHours(0,0,0,0);
+  return d.toISOString().slice(0,19);
 }
 
-function fmtTemp(v) {
+function fmt(v) {
   const n = Number(v);
-  return Number.isFinite(n) ? n.toFixed(1) : "--";
+  return Number.isFinite(n) ? n.toFixed(1) : '--';
 }
 
 async function updateCurrent() {
-  const feeds = await fetchFeeds("results=1");
-  if (!feeds.length) return;
+  const f = (await fetchFeeds('results=1'))[0];
+  if (!f) return;
 
-  const f = feeds[0];
   const tk = Number(f.field5);
   const tz = Number(f.field1);
 
-  tKotel.textContent    = fmtTemp(tk)    + " °C";
-  tZpet.textContent     = fmtTemp(tz)    + " °C";
-  deltaT.textContent    = fmtTemp(tk - tz) + " °C";
-  tPodavac.textContent  = fmtTemp(f.field2) + " °C";
-  tBojler.textContent   = fmtTemp(f.field3) + " °C";
-  tVenku.textContent    = fmtTemp(f.field4) + " °C";
-  feedTotal.textContent = secToHMS(Number(f.field8) || 0);
+  elements.tKotel.textContent    = fmt(tk) + ' °C';
+  elements.tZpet.textContent     = fmt(tz) + ' °C';
+  elements.deltaT.textContent    = fmt(tk - tz) + ' °C';
+  elements.tPodavac.textContent  = fmt(f.field2) + ' °C';
+  elements.tBojler.textContent   = fmt(f.field3) + ' °C';
+  elements.tVenku.textContent    = fmt(f.field4) + ' °C';
+  elements.feedTotal.textContent = secToHMS(f.field8);
 }
 
 async function updateHour() {
-  const f = await fetchFeeds("minutes=60&results=120");
+  const f = await fetchFeeds('minutes=60&results=120');
   if (f.length < 2) {
-    kgHour.textContent = "— kg";
-    powerKWbig.textContent = "— kWh";
+    elements.kgHour.textContent = '— kg';
+    elements.powerKWbig.textContent = '— kWh';
     return;
   }
   const sec = safeSecDiff(f.at(-1).field8, f[0].field8);
   const kg = secToKg(sec);
-  kgHour.textContent = kg.toFixed(2) + " kg";
-  powerKWbig.textContent = (kg * ENERGY * EFF).toFixed(1) + " kWh";
+  elements.kgHour.textContent = kg.toFixed(2) + ' kg';
+  elements.powerKWbig.textContent = (kg * ENERGY * EFF).toFixed(1) + ' kWh';
 }
 
 async function updateDay() {
-  kgDay.textContent = "načítám...";
-  costDay.textContent = "načítám...";
+  elements.kgDay.textContent = 'načítám...';
+  elements.costDay.textContent = 'načítám...';
 
-  const price = Number(priceKg.value) || 6.2;
   const start = todayStartISO();
-  const end = new Date().toISOString().slice(0,19);
-
+  const end   = new Date().toISOString().slice(0,19);
   const feeds = await fetchFeeds(`start=${start}&end=${end}&results=300`);
 
   let kg = 0;
   if (feeds.length >= 2) {
     const sec = safeSecDiff(feeds.at(-1).field8, feeds[0].field8);
     kg = secToKg(sec);
-  } // else → zůstane 0 kg
+  }
 
-  kgDay.textContent   = kg.toFixed(0) + " kg";
-  costDay.textContent = (kg * price).toFixed(0) + " Kč";
+  const price = Number(priceKgInput.value) || 6.2;
+  elements.kgDay.textContent   = kg.toFixed(0) + ' kg';
+  elements.costDay.textContent = (kg * price).toFixed(0) + ' Kč';
 }
 
 async function updateMonth() {
-  // Zde stále používáme denní kanál (souhrny za minulé dny + případně část dneška)
+  elements.kgMonth.textContent = 'načítám...';
+  elements.costMonth.textContent = 'načítám...';
+
   const now = new Date();
   const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const start = `${y}-${m}-01T00:00:00`;
+  const m = String(now.getMonth() + 1).padStart(2,'0');
+  const monthStart = `${y}-${m}-01T00:00:00`;
 
-  const f = await fetchDayFeeds(`start=${start}&results=400`);
   let kg = 0;
-  for (const d of f) {
-    kg += Number(d.field1) || 0;
+  const daily = await fetchDayFeeds(`start=${monthStart}&results=400`);
+  kg = daily.reduce((sum,d)=>sum + (Number(d.field1)||0), 0);
+
+  // + dnešek
+  const todayFeeds = await fetchFeeds(`start=${todayStartISO()}&results=300`);
+  if (todayFeeds.length >= 2) {
+    const sec = safeSecDiff(todayFeeds.at(-1).field8, todayFeeds[0].field8);
+    kg += secToKg(sec);
   }
 
-  const price = Number(priceKg.value) || 6.2;
-  kgMonth.textContent = kg.toFixed(0) + " kg";
-  costMonth.textContent = (kg * price).toFixed(0) + " Kč";
+  const price = Number(priceKgInput.value) || 6.2;
+  elements.kgMonth.textContent   = kg.toFixed(0) + ' kg';
+  elements.costMonth.textContent = (kg * price).toFixed(0) + ' Kč';
 }
 
-// Historie – zůstává z denního kanálu (minulé dny)
-historyBtn.onclick = async () => {
+document.getElementById('historyBtn').onclick = async () => {
   const box = document.getElementById('historyBox');
-  box.style.display = box.style.display === "none" ? "block" : "none";
-  if (box.style.display === "none") return;
+  const visible = box.style.display !== 'none';
+  box.style.display = visible ? 'none' : 'block';
+  if (visible) return;
 
-  const table = document.getElementById('historyTable');
-  table.innerHTML = "<tr><td colspan='3'>načítám...</td></tr>";
+  const tbody = document.getElementById('historyTable');
+  tbody.innerHTML = '<tr><td colspan="3">načítám...</td></tr>';
 
-  const price = Number(priceKg.value) || 6.2;
-  const f = await fetchDayFeeds("results=30");
+  const price = Number(priceKgInput.value) || 6.2;
+  const feeds = await fetchDayFeeds('results=31');
   const map = {};
-  for (const d of f) {
-    const day = new Date(d.created_at).toLocaleDateString("cs-CZ");
-    map[day] = (map[day] || 0) + (Number(d.field1) || 0);
+  feeds.forEach(d => {
+    const day = new Date(d.created_at).toLocaleDateString('cs-CZ');
+    map[day] = (map[day] || 0) + (Number(d.field1)||0);
+  });
+
+  tbody.innerHTML = Object.entries(map)
+    .sort(([a],[b]) => new Date(b) - new Date(a))
+    .map(([day,kg]) => `<tr><td>${day}</td><td>${kg.toFixed(0)}</td><td>${(kg*price).toFixed(0)}</td></tr>`)
+    .join('');
+};
+
+document.getElementById('monthHistoryBtn').onclick = async () => {
+  const box = document.getElementById('monthHistoryBox');
+  const visible = box.style.display !== 'none';
+  box.style.display = visible ? 'none' : 'block';
+  if (visible) return;
+
+  const tbody = document.getElementById('monthHistoryTable');
+  tbody.innerHTML = '<tr><td colspan="3">načítám...</td></tr>';
+
+  const price = Number(priceKgInput.value) || 6.2;
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - 14, 1).toISOString().slice(0,19);
+
+  const feeds = await fetchDayFeeds(`start=${start}&results=500`);
+  const months = {};
+
+  feeds.forEach(d => {
+    const dt = new Date(d.created_at);
+    const key = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+    months[key] = (months[key] || 0) + (Number(d.field1)||0);
+  });
+
+  // aktuální měsíc + dnešek
+  const curKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  if (!(curKey in months)) months[curKey] = 0;
+
+  const todayStart = todayStartISO();
+  const todayF = await fetchFeeds(`start=${todayStart}&results=300`);
+  if (todayF.length >= 2) {
+    const sec = safeSecDiff(todayF.at(-1).field8, todayF[0].field8);
+    months[curKey] += secToKg(sec);
   }
 
-  table.innerHTML = "";
-  Object.entries(map).reverse().forEach(([day, kg]) => {
-    table.innerHTML += `<tr><td>${day}</td><td>${kg.toFixed(0)}</td><td>${(kg * price).toFixed(0)}</td></tr>`;
-  });
+  tbody.innerHTML = Object.entries(months)
+    .sort(([a],[b]) => b.localeCompare(a))
+    .slice(0,12)
+    .map(([key,kg]) => {
+      const [y,m] = key.split('-');
+      const date = new Date(y, m-1);
+      const name = date.toLocaleDateString('cs-CZ', {month:'long', year:'numeric'});
+      return `<tr><td>${name}</td><td>${kg.toFixed(0)}</td><td>${(kg*price).toFixed(0)}</td></tr>`;
+    })
+    .join('') || '<tr><td colspan="3">Žádná data</td></tr>';
 };
 
-// monthHistoryBtn a totalHistoryBtn zůstávají podobně (můžeš doladit podle potřeby)
+document.getElementById('totalHistoryBtn').onclick = async () => {
+  const box = document.getElementById('totalHistoryBox');
+  const visible = box.style.display !== 'none';
+  box.style.display = visible ? 'none' : 'block';
+  if (visible) return;
 
-kg10min.oninput = () => {
-  localStorage.kg10min = kg10min.value;
-  updateHour();
-  updateDay();
+  const tbody = document.getElementById('totalHistoryTable');
+  tbody.innerHTML = '<tr><td colspan="3">načítám...</td></tr>';
+
+  const price = Number(priceKgInput.value) || 6.2;
+  const all = await fetchDayFeeds('results=8000');
+
+  let totalKg = all.reduce((s,d)=>s + (Number(d.field1)||0), 0);
+  let first = all.length ? new Date(all.at(-1).created_at) : null;
+  let last  = all.length ? new Date(all[0].created_at)  : null;
+
+  // + dnešek
+  const ts = todayStartISO();
+  const tf = await fetchFeeds(`start=${ts}&results=300`);
+  if (tf.length >= 2) {
+    const sec = safeSecDiff(tf.at(-1).field8, tf[0].field8);
+    totalKg += secToKg(sec);
+    if (!last || new Date(tf[0].created_at) > last) last = new Date();
+  }
+
+  const period = first && last
+    ? `${first.toLocaleDateString('cs-CZ')} – ${last.toLocaleDateString('cs-CZ')}`
+    : 'Žádná data';
+
+  tbody.innerHTML = `<tr><td>${period}</td><td>${totalKg.toFixed(0)}</td><td>${(totalKg*price).toFixed(0)}</td></tr>`;
 };
 
-priceKg.oninput = () => {
-  localStorage.priceKg = priceKg.value;
-  updateDay();
-  updateMonth();
-};
+kg10minInput.oninput = () => { localStorage.kg10min = kg10minInput.value; updateHour(); updateDay(); };
+priceKgInput.oninput = () => { localStorage.priceKg = priceKgInput.value; updateDay(); updateMonth(); };
 
 document.getElementById('fullscreenBtn').onclick = () => {
-  const elem = document.documentElement;
+  const e = document.documentElement;
   if (!document.fullscreenElement) {
-    elem.requestFullscreen?.() || elem.webkitRequestFullscreen?.();
+    e.requestFullscreen?.() || e.webkitRequestFullscreen?.();
   } else {
     document.exitFullscreen?.() || document.webkitExitFullscreen?.();
   }
 };
 
-// spuštění
-updateClock();
+// inicializace
+elements.clock.textContent = new Date().toLocaleString('cs-CZ');
 updateCurrent();
 updateHour();
 updateDay();
 updateMonth();
 
-setInterval(updateClock, 10000);
+setInterval(()=>{ elements.clock.textContent = new Date().toLocaleString('cs-CZ'); }, 10000);
 setInterval(updateCurrent, 30000);
-setInterval(updateHour, 300000);
-setInterval(updateDay, 60000);     // častěji – protože chceme průběžnou hodnotu dnes
-setInterval(updateMonth, 1800000);
-
+setInterval(updateHour,   300000);
+setInterval(updateDay,     60000);
+setInterval(updateMonth,  600000);
 </script>
 
-<footer style="text-align:center;margin:40px 0 20px;opacity:.85">
-  <img
-    src="https://raw.githubusercontent.com/Lukianoo/fd25-dashboard/main/logo-elektroservis.png"
-    alt="Elektroservis logo"
-    style="max-width:400px;width:100%;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))"
-  >
+<footer>
+  <img src="https://raw.githubusercontent.com/Lukianoo/fd25-dashboard/main/logo-elektroservis.png" alt="Elektroservis logo">
 </footer>
 
 </body>
