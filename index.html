@@ -276,6 +276,16 @@ function monthStartISO(){
   d.setHours(0,0,0,0);
   return localISO(d);
 }
+async function fetchDayFeeds(p){
+  try{
+    const r = await fetch(
+      `https://api.thingspeak.com/channels/${DAY_CHANNEL}/feeds.json?${p}`
+    );
+    return (await r.json()).feeds || [];
+  }catch(e){
+    return [];
+  }
+}
 
 
 async function fetchFeeds(p){
@@ -313,7 +323,12 @@ async function updateHour(){
 
 async function updateDay(){
   const f = await fetchDayFeeds("results=1");
-  if(!f.length) return;
+
+  if(!f.length){
+    kgDay.textContent = "0 kg";
+    costDay.textContent = "0 Kč";
+    return;
+  }
 
   const kg = +f[0].field1 || 0;
 
@@ -321,6 +336,7 @@ async function updateDay(){
   costDay.textContent =
     (kg * (+priceKg.value || 6.2)).toFixed(0) + " Kč";
 }
+
 
 
 async function updateMonth(){
@@ -413,11 +429,19 @@ totalHistoryBtn.onclick = async () => {
 
   const f = await fetchDayFeeds("results=8000");
 
-  let totalKg = 0;
-  f.forEach(d => totalKg += +d.field1 || 0);
+if (!f || f.length === 0){
+  totalHistoryTable.innerHTML = `
+    <tr>
+      <td colspan="3">⛔ Zatím nejsou žádná data</td>
+    </tr>`;
+  return;
+}
 
-  const first = new Date(f.at(-1).created_at);
-  const last  = new Date(f[0].created_at);
+let totalKg = 0;
+f.forEach(d => totalKg += +d.field1 || 0);
+
+const first = new Date(f.at(-1).created_at);
+const last  = new Date(f[0].created_at);
 
   totalHistoryTable.innerHTML = `
     <tr>
