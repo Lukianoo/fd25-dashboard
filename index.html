@@ -312,39 +312,36 @@ async function updateHour(){
 }
 
 async function updateDay(){
-  const f=await fetchFeeds("start="+todayStartISO()+"&results=2000");
-  if(f.length<2)return;
-  const kg=secToKg(f.at(-1).field8-f[0].field8);
-  kgDay.textContent=kg.toFixed(0)+" kg";
-  costDay.textContent=(kg*(+priceKg.value||6.2)).toFixed(0)+" Kč";
+  const f = await fetchDayFeeds("results=1");
+  if(!f.length) return;
+
+  const kg = +f[0].field1 || 0;
+
+  kgDay.textContent = kg.toFixed(0) + " kg";
+  costDay.textContent =
+    (kg * (+priceKg.value || 6.2)).toFixed(0) + " Kč";
 }
 
-async function updateMonth(){
-  const f = await fetchFeeds(
-    "start=" + monthStartISO() + "&results=8000"
-  );
-  if(f.length < 2){
-    kgMonth.textContent = "0 kg";
-    costMonth.textContent = "0 Kč";
-    return;
-  }
 
-  const sec = f.at(-1).field8 - f[0].field8;
-  const kg = secToKg(sec);
+async function updateMonth(){
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1;
+
+  const start = `${y}-${String(m).padStart(2,"0")}-01T00:00:00`;
+
+  const f = await fetchDayFeeds(
+    `start=${start}&results=400`
+  );
+
+  let kg = 0;
+  for(const d of f){
+    kg += +d.field1 || 0;
+  }
 
   kgMonth.textContent = kg.toFixed(0) + " kg";
   costMonth.textContent =
     (kg * (+priceKg.value || 6.2)).toFixed(0) + " Kč";
-}
-async function fetchDayFeeds(params){
-  try{
-    const r = await fetch(
-      `https://api.thingspeak.com/channels/${DAY_CHANNEL}/feeds.json?${params}`
-    );
-    return (await r.json()).feeds || [];
-  }catch(e){
-    return [];
-  }
 }
 
 
@@ -355,15 +352,15 @@ historyBtn.onclick = async () => {
   historyTable.innerHTML = "";
   const price = +priceKg.value || 6.2;
 
-  for (let i = 0; i < 14; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
+  const f = await fetchDayFeeds("results=30");
 
-    const kg = await getDayKg(d);
+  for(const d of f.reverse()){
+    const kg = +d.field1 || 0;
+    const date = new Date(d.created_at);
 
     historyTable.innerHTML += `
       <tr>
-        <td>${d.toLocaleDateString("cs-CZ")}</td>
+        <td>${date.toLocaleDateString("cs-CZ")}</td>
         <td>${kg.toFixed(0)}</td>
         <td>${(kg * price).toFixed(0)}</td>
       </tr>`;
@@ -379,27 +376,30 @@ monthHistoryBtn.onclick = async () => {
   monthHistoryTable.innerHTML = "";
   const price = +priceKg.value || 6.2;
 
-  for (let i = 0; i < 12; i++) {
-    let monthKg = 0;
+  const f = await fetchDayFeeds("results=400");
 
-    const ms = new Date();
-    ms.setMonth(ms.getMonth() - i, 1);
-    ms.setHours(0,0,0,0);
+  const months = {};
 
-    const me = new Date(ms);
-    me.setMonth(me.getMonth() + 1);
-
-    for (let d = new Date(ms); d < me; d.setDate(d.getDate() + 1)) {
-      monthKg += await getDayKg(d);
-    }
-
-    monthHistoryTable.innerHTML += `
-      <tr>
-        <td>${ms.toLocaleDateString("cs-CZ",{month:"long",year:"numeric"})}</td>
-        <td>${monthKg.toFixed(0)}</td>
-        <td>${(monthKg * price).toFixed(0)}</td>
-      </tr>`;
+  for(const d of f){
+    const dt = new Date(d.created_at);
+    const key = dt.getFullYear()+"-"+dt.getMonth();
+    months[key] = (months[key] || 0) + (+d.field1 || 0);
   }
+
+  Object.entries(months)
+    .reverse()
+    .slice(0,12)
+    .forEach(([k,kg])=>{
+      const [y,m] = k.split("-");
+      const d = new Date(y, m);
+
+      monthHistoryTable.innerHTML += `
+        <tr>
+          <td>${d.toLocaleDateString("cs-CZ",{month:"long",year:"numeric"})}</td>
+          <td>${kg.toFixed(0)}</td>
+          <td>${(kg * price).toFixed(0)}</td>
+        </tr>`;
+    });
 };
 
 
@@ -411,26 +411,22 @@ totalHistoryBtn.onclick = async () => {
   totalHistoryTable.innerHTML = "";
   const price = +priceKg.value || 6.2;
 
+  const f = await fetchDayFeeds("results=8000");
+
   let totalKg = 0;
+  f.forEach(d => totalKg += +d.field1 || 0);
 
-  // OD KDY CHCEŠ POČÍTAT (UPRAV SI)
-  const start = new Date("2024-01-01");
-  start.setHours(0,0,0,0);
-
-  const today = new Date();
-  today.setHours(0,0,0,0);
-
-  for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
-    totalKg += await getDayKg(d);
-  }
+  const first = new Date(f.at(-1).created_at);
+  const last  = new Date(f[0].created_at);
 
   totalHistoryTable.innerHTML = `
     <tr>
-      <td>${start.toLocaleDateString("cs-CZ")} – ${today.toLocaleDateString("cs-CZ")}</td>
+      <td>${first.toLocaleDateString("cs-CZ")} – ${last.toLocaleDateString("cs-CZ")}</td>
       <td>${totalKg.toFixed(0)}</td>
       <td>${(totalKg * price).toFixed(0)}</td>
     </tr>`;
 };
+
 
 
 kg10min.oninput=()=>{localStorage.kg10min=kg10min.value;updateHour();updateDay();updateMonth();}
