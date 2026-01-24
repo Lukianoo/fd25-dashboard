@@ -336,6 +336,16 @@ async function updateMonth(){
   costMonth.textContent =
     (kg * (+priceKg.value || 6.2)).toFixed(0) + " Kč";
 }
+async function fetchDayFeeds(params){
+  try{
+    const r = await fetch(
+      `https://api.thingspeak.com/channels/${DAY_CHANNEL}/feeds.json?${params}`
+    );
+    return (await r.json()).feeds || [];
+  }catch(e){
+    return [];
+  }
+}
 
 
 historyBtn.onclick = async () => {
