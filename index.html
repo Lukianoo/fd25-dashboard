@@ -370,18 +370,22 @@ historyBtn.onclick = async () => {
 
   const f = await fetchDayFeeds("results=30");
 
-  for(const d of f.reverse()){
-    const kg = +d.field1 || 0;
-    const date = new Date(d.created_at);
+  const map = {};
+  for (const d of f){
+    const day = new Date(d.created_at).toLocaleDateString("cs-CZ");
+    map[day] = (map[day] || 0) + (+d.field1 || 0);
+  }
 
+  Object.entries(map).reverse().forEach(([day, kg]) => {
     historyTable.innerHTML += `
       <tr>
-        <td>${date.toLocaleDateString("cs-CZ")}</td>
+        <td>${day}</td>
         <td>${kg.toFixed(0)}</td>
         <td>${(kg * price).toFixed(0)}</td>
       </tr>`;
-  }
+  });
 };
+
 
 
 
