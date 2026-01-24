@@ -337,27 +337,42 @@ monthHistoryBtn.onclick = async () => {
   const price = +priceKg.value || 6.2;
 
   for (let i = 0; i < 12; i++) {
-    const s = new Date();
-    s.setMonth(s.getMonth() - i, 1);
-    s.setHours(0, 0, 0, 0);
+    let monthKg = 0;
 
-    const e = new Date(s);
-    e.setMonth(e.getMonth() + 1);
+    const ms = new Date();
+    ms.setMonth(ms.getMonth() - i, 1);
+    ms.setHours(0,0,0,0);
 
-    const f = await fetchFeeds(
-      `start=${localISO(s)}&end=${localISO(e)}&results=8000`
-    );
+    const me = new Date(ms);
+    me.setMonth(me.getMonth() + 1);
 
-    if (f.length > 1) {
-      const kg = secToKg(f.at(-1).field8 - f[0].field8);
-      monthHistoryTable.innerHTML += `<tr>
-        <td>${s.toLocaleDateString("cs-CZ", { month: "long", year: "numeric" })}</td>
-        <td>${kg.toFixed(0)}</td>
-        <td>${(kg * price).toFixed(0)}</td>
-      </tr>`;
+    for (
+      let d = new Date(ms);
+      d < me;
+      d.setDate(d.getDate() + 1)
+    ) {
+      const d1 = new Date(d);
+      const d2 = new Date(d); d2.setDate(d2.getDate() + 1);
+
+      const f = await fetchFeeds(
+        `start=${localISO(d1)}&end=${localISO(d2)}&results=1000`
+      );
+
+      if (f.length > 1) {
+        const sec = f.at(-1).field8 - f[0].field8;
+        if (sec > 0) monthKg += secToKg(sec);
+      }
     }
+
+    monthHistoryTable.innerHTML += `
+      <tr>
+        <td>${ms.toLocaleDateString("cs-CZ",{month:"long",year:"numeric"})}</td>
+        <td>${monthKg.toFixed(0)}</td>
+        <td>${(monthKg * price).toFixed(0)}</td>
+      </tr>`;
   }
 };
+
 
 
 totalHistoryBtn.onclick = async () => {
