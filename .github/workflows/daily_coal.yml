@@ -1,0 +1,114 @@
+name: Denní součet podavače
+
+on:
+  schedule:
+    # Spouštíme 2x denně – jednou pro CET (23:00 UTC), jednou pro CEST (22:00 UTC)
+    # Skript sám pozná který čas je správný a ten druhý se sám ukončí
+    - cron: '0 22 * * *'
+    - cron: '0 23 * * *'
+  workflow_dispatch:  # možnost spustit ručně z GitHub UI
+
+jobs:
+  calculate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Spočítat spotřebu a zapsat do ThingSpeak
+        run: |
+          node - <<'EOF'
+
+          const SRC_CHANNEL   = 231269;
+          const DST_CHANNEL   = 3238281;
+          const DST_WRITE_KEY = 'O9TZ6GIFVVSW78LV';
+          const KG_PER_10MIN  = 2.3;
+          const PRICE_PER_KG  = 6.2;
+
+          // ── Zjistí jestli je v Praze právě letní čas (CEST = UTC+2) ──────────
+          function isCEST(date) {
+            // Evropský letní čas: poslední neděle v březnu 02:00 → poslední neděle v říjnu 03:00
+            function lastSunday(year, month) {
+              // month: 0-based JS měsíc
+              const d = new Date(Date.UTC(year, month + 1, 0)); // poslední den měsíce
+              d.setUTCDate(d.getUTCDate() - d.getUTCDay());     // odečti dny k neděli
+              return d;
+            }
+            const y       = date.getUTCFullYear();
+            const dstStart = new Date(lastSunday(y, 2));  // poslední neděle března
+            dstStart.setUTCHours(1, 0, 0, 0);             // 01:00 UTC = 02:00 CET → přechod
+            const dstEnd   = new Date(lastSunday(y, 9));  // poslední neděle října
+            dstEnd.setUTCHours(1, 0, 0, 0);               // 01:00 UTC = 03:00 CEST → přechod
+            return date >= dstStart && date < dstEnd;
+          }
+
+          async function main() {
+            const now      = new Date();
+            const utcHour  = now.getUTCHours();
+            const cest     = isCEST(now);
+
+            // CEST (letní): půlnoc = 22:00 UTC  |  CET (zimní): půlnoc = 23:00 UTC
+            const expectedHour = cest ? 22 : 23;
+
+            if (utcHour !== expectedHour) {
+              console.log(`ℹ️  Aktuální UTC hodina: ${utcHour}, očekávaná: ${expectedHour} (${cest ? 'CEST' : 'CET'}) → přeskakuji.`);
+              process.exit(0);
+            }
+
+            console.log(`✅ Správný čas pro ${cest ? 'CEST (letní)' : 'CET (zimní)'} – spouštím výpočet.`);
+
+            // ── Stažení dat za posledních 24 hodin ───────────────────────────
+            const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            const start = yesterday.toISOString().replace('T',' ').replace('Z','');
+            const end   = now.toISOString().replace('T',' ').replace('Z','');
+
+            const url = `https://api.thingspeak.com/channels/${SRC_CHANNEL}/fields/8.json`
+                      + `?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&results=8000`;
+
+            console.log('Stahuji data:', url);
+
+            const res   = await fetch(url);
+            const json  = await res.json();
+            const feeds = json.feeds?.filter(f => f.field8 !== null && f.field8 !== undefined) ?? [];
+
+            if (feeds.length < 2) {
+              console.error(`❌ Nedostatek dat: ${feeds.length} záznamů`);
+              process.exit(1);
+            }
+
+            const secStart = parseFloat(feeds[0].field8);
+            const secEnd   = parseFloat(feeds[feeds.length - 1].field8);
+            let   secDiff  = secEnd - secStart;
+
+            console.log(`secStart=${secStart}  secEnd=${secEnd}  diff=${secDiff}s`);
+
+            if (secDiff < 0) {
+              console.warn('⚠️  secDiff < 0 (reset čítače?), nastavuji na 0');
+              secDiff = 0;
+            }
+
+            const kg   = (secDiff / 600) * KG_PER_10MIN;
+            const cost = kg * PRICE_PER_KG;
+
+            console.log(`kg=${kg.toFixed(3)}  cost=${cost.toFixed(2)} Kč`);
+
+            // ── Zápis do DST channelu ─────────────────────────────────────────
+            const body = new URLSearchParams({
+              api_key: DST_WRITE_KEY,
+              field1:  kg.toFixed(3),
+              field2:  cost.toFixed(2),
+            });
+
+            const writeRes  = await fetch('https://api.thingspeak.com/update.json', { method: 'POST', body });
+            const writeText = await writeRes.text();
+            console.log('ThingSpeak odpověď:', writeText);
+
+            if (writeText === '0') {
+              console.error('❌ Zápis selhal (odpověď 0) – možný rate limit nebo špatný API klíč');
+              process.exit(1);
+            }
+
+            console.log('✅ Hotovo!');
+          }
+
+          main().catch(e => { console.error(e); process.exit(1); });
+
+          EOF
