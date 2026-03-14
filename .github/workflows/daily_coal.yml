@@ -18,6 +18,7 @@ jobs:
           node - <<'EOF'
 
           const SRC_CHANNEL   = 231269;
+          const SRC_FIELD     = 8;        // field8 = celkový čas podavače (sekundy)
           const DST_CHANNEL   = 3238281;
           const DST_WRITE_KEY = 'O9TZ6GIFVVSW78LV';
           const KG_PER_10MIN  = 2.3;
@@ -60,22 +61,23 @@ jobs:
             const start = yesterday.toISOString().replace('T',' ').replace('Z','');
             const end   = now.toISOString().replace('T',' ').replace('Z','');
 
-            const url = `https://api.thingspeak.com/channels/${SRC_CHANNEL}/fields/8.json`
+            const url = `https://api.thingspeak.com/channels/${SRC_CHANNEL}/fields/${SRC_FIELD}.json`
                       + `?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&results=8000`;
 
             console.log('Stahuji data:', url);
 
             const res   = await fetch(url);
             const json  = await res.json();
-            const feeds = json.feeds?.filter(f => f.field8 !== null && f.field8 !== undefined) ?? [];
+            const fieldKey = `field${SRC_FIELD}`;
+            const feeds = json.feeds?.filter(f => f[fieldKey] !== null && f[fieldKey] !== undefined) ?? [];
 
             if (feeds.length < 2) {
               console.error(`❌ Nedostatek dat: ${feeds.length} záznamů`);
               process.exit(1);
             }
 
-            const secStart = parseFloat(feeds[0].field8);
-            const secEnd   = parseFloat(feeds[feeds.length - 1].field8);
+            const secStart = parseFloat(feeds[0][fieldKey]);
+            const secEnd   = parseFloat(feeds[feeds.length - 1][fieldKey]);
             let   secDiff  = secEnd - secStart;
 
             console.log(`secStart=${secStart}  secEnd=${secEnd}  diff=${secDiff}s`);
