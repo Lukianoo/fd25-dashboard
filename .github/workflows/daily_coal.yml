@@ -4,8 +4,8 @@ on:
   schedule:
     # Spouštíme 2x denně – jednou pro CET (23:00 UTC), jednou pro CEST (22:00 UTC)
     # Skript sám pozná který čas je správný a ten druhý se sám ukončí
+    - cron: '0 21 * * *'
     - cron: '0 22 * * *'
-    - cron: '0 23 * * *'
   workflow_dispatch:  # možnost spustit ručně z GitHub UI
 
 jobs:
@@ -46,9 +46,8 @@ jobs:
             const utcHour  = now.getUTCHours();
             const cest     = isCEST(now);
 
-            // CEST (letní): půlnoc = 22:00 UTC  |  CET (zimní): půlnoc = 23:00 UTC
-            const expectedHour = cest ? 22 : 23;
-
+           // CEST (letní): 23:00 = 21:00 UTC  |  CET (zimní): 23:00 = 22:00 UTC
+            const expectedHour = cest ? 21 : 22;
             if (utcHour !== expectedHour) {
               console.log(`ℹ️  Aktuální UTC hodina: ${utcHour}, očekávaná: ${expectedHour} (${cest ? 'CEST' : 'CET'}) → přeskakuji.`);
               process.exit(0);
