@@ -56,9 +56,11 @@ button{
 #historyBtn { background-color: #ef6c00; color: #fff; }
 #monthHistoryBtn { background-color: #1565c0; color: #fff; }
 #totalHistoryBtn { background-color: #2e7d32; color: #fff; }
+#seasonHistoryBtn { background-color: #6a1b9a; color: #fff; }
 #historyBtn:hover,
 #monthHistoryBtn:hover,
-#totalHistoryBtn:hover { opacity: 0.85; }
+#totalHistoryBtn:hover,
+#seasonHistoryBtn:hover { opacity: 0.85; }
 table{width:100%;border-collapse:collapse}
 th,td{padding:8px;text-align:center}
 th{background:#eee}
@@ -87,7 +89,7 @@ footer img:hover{
   .sub { font-size: 12px; }
   .settings { grid-template-columns:1fr; }
   .grid { grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); }
-  #historyBox table, #totalHistoryBox table {
+  #historyBox table, #totalHistoryBox table, #seasonHistoryBox table {
     display: block;
     overflow-x: auto;
     white-space: nowrap;
@@ -130,11 +132,14 @@ footer img:hover{
   <div><div class="sub">MĚSÍC</div><div class="value blue" id="kgMonth">0 kg</div></div>
   <div><div class="sub">CENA DNES</div><div class="value" id="costDay">0 Kč</div></div>
   <div><div class="sub">CENA MĚSÍC</div><div class="value" id="costMonth">0 Kč</div></div>
+  <div><div class="sub">SEZÓNA <span id="seasonLabel"></span></div><div class="value" style="color:#6a1b9a" id="kgSeason">0 kg</div></div>
+  <div><div class="sub">CENA SEZÓNA</div><div class="value" id="costSeason">0 Kč</div></div>
 </div>
 <br>
 <div class="buttons-wrapper">
   <button id="historyBtn">📅 Denní historie spotřeby</button>
   <button id="monthHistoryBtn">📆 Měsíční historie spotřeby</button>
+  <button id="seasonHistoryBtn">🍂 Sezónní historie spotřeby (září – srpen)</button>
   <button id="totalHistoryBtn">📈 Celková historie spotřeby</button>
 </div>
 </div>
@@ -162,6 +167,19 @@ footer img:hover{
       </tr>
     </thead>
     <tbody id="monthHistoryTable"></tbody>
+  </table>
+</div>
+<div id="seasonHistoryBox" class="card" style="display:none;margin-top:20px">
+  <h2>🍂 Sezónní historie – topná sezóna 1. 9. – 31. 8.</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Sezóna</th>
+        <th>Spotřeba (kg)</th>
+        <th>Cena (Kč)</th>
+      </tr>
+    </thead>
+    <tbody id="seasonHistoryTable"></tbody>
   </table>
 </div>
 <div id="totalHistoryBox" class="card" style="display:none;margin-top:20px">
@@ -368,6 +386,48 @@ monthHistoryBtn.onclick = async () => {
         </tr>`;
     });
 };
+// ── Topná sezóna: 1. září – 31. srpna ──────────────────────────────
+function seasonStartYear(d){
+  return d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1; // září = měsíc 8
+}
+function seasonName(y){ return `${y}/${y+1}`; }
+async function updateSeason(){
+  const y = seasonStartYear(new Date());
+  const f = await fetchDayFeeds(`start=${y}-09-01T00:00:00&results=8000`);
+  let kg = 0;
+  for (const d of f){
+    if (seasonStartYear(new Date(d.created_at)) === y) kg += +d.field1 || 0;
+  }
+  seasonLabel.textContent = seasonName(y);
+  kgSeason.textContent = kg.toFixed(0) + " kg";
+  costSeason.textContent = (kg * (+priceKg.value || 6.2)).toFixed(0) + " Kč";
+}
+seasonHistoryBtn.onclick = async () => {
+  seasonHistoryBox.style.display =
+    seasonHistoryBox.style.display === "none" ? "block" : "none";
+  seasonHistoryTable.innerHTML = "";
+  const price = +priceKg.value || 6.2;
+  const f = await fetchDayFeeds("results=8000");
+  const seasons = {};
+  for (const d of f){
+    const y = seasonStartYear(new Date(d.created_at));
+    seasons[y] = (seasons[y] || 0) + (+d.field1 || 0);
+  }
+  const keys = Object.keys(seasons).map(Number).sort((a,b) => b - a);
+  if (!keys.length){
+    seasonHistoryTable.innerHTML = `<tr><td colspan="3">⛔ Zatím nejsou žádná data</td></tr>`;
+    return;
+  }
+  for (const y of keys){
+    const kg = seasons[y];
+    seasonHistoryTable.innerHTML += `
+      <tr>
+        <td>${seasonName(y)}</td>
+        <td>${kg.toFixed(0)}</td>
+        <td>${(kg * price).toFixed(0)}</td>
+      </tr>`;
+  }
+};
 totalHistoryBtn.onclick = async () => {
   totalHistoryBox.style.display =
     totalHistoryBox.style.display === "none" ? "block" : "none";
@@ -392,14 +452,15 @@ const last = new Date(f[0].created_at);
       <td>${(totalKg * price).toFixed(0)}</td>
     </tr>`;
 };
-kg10min.oninput=()=>{localStorage.kg10min=kg10min.value;updateHour();updateDay();updateMonth();}
-priceKg.oninput=()=>{localStorage.priceKg=priceKg.value;updateDay();updateMonth();}
-updateClock();updateCurrent();updateHour();updateDay();updateMonth();
+kg10min.oninput=()=>{localStorage.kg10min=kg10min.value;updateHour();updateDay();updateMonth();updateSeason();}
+priceKg.oninput=()=>{localStorage.priceKg=priceKg.value;updateDay();updateMonth();updateSeason();}
+updateClock();updateCurrent();updateHour();updateDay();updateMonth();updateSeason();
 setInterval(updateClock,1000);
 setInterval(updateCurrent,30000);
 setInterval(updateHour,300000);
 setInterval(updateDay,900000);
 setInterval(updateMonth,1800000);
+setInterval(updateSeason,1800000);
 fullscreenBtn.onclick = () => {
   const elem = document.documentElement; // celý dokument
   if (!document.fullscreenElement && !document.webkitFullscreenElement) {
