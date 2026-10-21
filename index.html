@@ -200,14 +200,15 @@ footer img:hover{
 <h2>⚙️ Nastavení</h2>
 <div class="settings">
   <div>
-    <label>Kg uhlí / 10 min</label>
-    <input type="number" id="kg10min" step="0.1">
+    <div class="sub">Kg uhlí / 10 min chodu podavače</div>
+    <div class="value blue" id="kg10minInfo">--</div>
   </div>
   <div>
-    <label>Cena / kg</label>
-    <input type="number" id="priceKg" step="0.1">
+    <div class="sub">Cena / kg</div>
+    <div class="value blue" id="priceKgInfo">--</div>
   </div>
 </div>
+<div class="sub" style="margin-top:10px">Hodnoty se mění v kódu stránky (index.html) a ve výpočtu na GitHubu (daily_coal.yml).</div>
 </div>
 </main>
 <script>
@@ -215,8 +216,20 @@ const CHANNEL = 231269;
 const DAY_CHANNEL = 3238281; // denní součty v kg
 const ENERGY = 4.8;
 const EFF = 0.75;
-kg10min.value = localStorage.kg10min || 2.5;
-priceKg.value = localStorage.priceKg || 6.2;
+// ── Jednotné nastavení – MUSÍ odpovídat daily_coal.yml ─────────────
+const KG_PER_10MIN = 2.4;   // kg uhlí za 10 min chodu podavače
+const PRICE_PER_KG = 6.4;   // Kč za 1 kg uhlí
+const OLD_KG_PER_10MIN = 2.3; // čím byly spočítané denní záznamy před sjednocením
+const UNIFIED_FROM = new Date("2026-10-21T12:00:00Z"); // od kdy výpočet na GitHubu používá 2,4 kg
+kg10minInfo.textContent = KG_PER_10MIN.toLocaleString("cs-CZ") + " kg";
+priceKgInfo.textContent = PRICE_PER_KG.toLocaleString("cs-CZ") + " Kč";
+// kg za jeden denní záznam – z doby podavače (field3), jinak z field1 (starší přepočte na 2,4 kg)
+function dayKg(d){
+  const sec = parseFloat(d.field3);
+  if (Number.isFinite(sec)) return Math.max(0, sec / 600 * KG_PER_10MIN);
+  const kg = parseFloat(d.field1) || 0;
+  return new Date(d.created_at) < UNIFIED_FROM ? kg / OLD_KG_PER_10MIN * KG_PER_10MIN : kg;
+}
 function updateClock(){
   clock.textContent = new Date().toLocaleString("cs-CZ");
 }
@@ -228,7 +241,7 @@ function secToHMS(sec){
   return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
 function secToKg(sec){
-  return Math.max(0,(sec/600)*(+kg10min.value||2.5));
+  return Math.max(0,(sec/600)*KG_PER_10MIN);
 }
 function safeSecDiff(a, b){
   const d = a - b;
@@ -321,7 +334,7 @@ async function updateDay(){
   const kg = secToKg(sec);
 
   kgDay.textContent = kg.toFixed(2) + " kg";
-  costDay.textContent = (kg * (+priceKg.value || 6.2)).toFixed(0) + " Kč";
+  costDay.textContent = (kg * PRICE_PER_KG).toFixed(0) + " Kč";
 }
 
 async function updateMonth(){
@@ -334,22 +347,22 @@ async function updateMonth(){
   );
   let kg = 0;
   for(const d of f){
-    kg += +d.field1 || 0;
+    kg += dayKg(d);
   }
   kgMonth.textContent = kg.toFixed(0) + " kg";
   costMonth.textContent =
-    (kg * (+priceKg.value || 6.2)).toFixed(0) + " Kč";
+    (kg * PRICE_PER_KG).toFixed(0) + " Kč";
 }
 historyBtn.onclick = async () => {
   historyBox.style.display =
     historyBox.style.display === "none" ? "block" : "none";
   historyTable.innerHTML = "";
-  const price = +priceKg.value || 6.2;
+  const price = PRICE_PER_KG;
   const f = await fetchDayFeeds("results=30");
   const map = {};
   for (const d of f){
     const day = new Date(d.created_at).toLocaleDateString("cs-CZ");
-    map[day] = (map[day] || 0) + (+d.field1 || 0);
+    map[day] = (map[day] || 0) + dayKg(d);
   }
   Object.entries(map).reverse().forEach(([day, kg]) => {
     historyTable.innerHTML += `
@@ -364,13 +377,13 @@ monthHistoryBtn.onclick = async () => {
   monthHistoryBox.style.display =
     monthHistoryBox.style.display === "none" ? "block" : "none";
   monthHistoryTable.innerHTML = "";
-  const price = +priceKg.value || 6.2;
+  const price = PRICE_PER_KG;
   const f = await fetchDayFeeds("results=400");
   const months = {};
   for(const d of f){
     const dt = new Date(d.created_at);
     const key = dt.getFullYear()+"-"+dt.getMonth();
-    months[key] = (months[key] || 0) + (+d.field1 || 0);
+    months[key] = (months[key] || 0) + dayKg(d);
   }
   Object.entries(months)
     .reverse()
@@ -396,22 +409,22 @@ async function updateSeason(){
   const f = await fetchDayFeeds(`start=${y}-09-01T00:00:00&results=8000`);
   let kg = 0;
   for (const d of f){
-    if (seasonStartYear(new Date(d.created_at)) === y) kg += +d.field1 || 0;
+    if (seasonStartYear(new Date(d.created_at)) === y) kg += dayKg(d);
   }
   seasonLabel.textContent = seasonName(y);
   kgSeason.textContent = kg.toFixed(0) + " kg";
-  costSeason.textContent = (kg * (+priceKg.value || 6.2)).toFixed(0) + " Kč";
+  costSeason.textContent = (kg * PRICE_PER_KG).toFixed(0) + " Kč";
 }
 seasonHistoryBtn.onclick = async () => {
   seasonHistoryBox.style.display =
     seasonHistoryBox.style.display === "none" ? "block" : "none";
   seasonHistoryTable.innerHTML = "";
-  const price = +priceKg.value || 6.2;
+  const price = PRICE_PER_KG;
   const f = await fetchDayFeeds("results=8000");
   const seasons = {};
   for (const d of f){
     const y = seasonStartYear(new Date(d.created_at));
-    seasons[y] = (seasons[y] || 0) + (+d.field1 || 0);
+    seasons[y] = (seasons[y] || 0) + dayKg(d);
   }
   const keys = Object.keys(seasons).map(Number).sort((a,b) => b - a);
   if (!keys.length){
@@ -432,7 +445,7 @@ totalHistoryBtn.onclick = async () => {
   totalHistoryBox.style.display =
     totalHistoryBox.style.display === "none" ? "block" : "none";
   totalHistoryTable.innerHTML = "";
-  const price = +priceKg.value || 6.2;
+  const price = PRICE_PER_KG;
   const f = await fetchDayFeeds("results=8000");
 if (!f || f.length === 0){
   totalHistoryTable.innerHTML = `
@@ -442,7 +455,7 @@ if (!f || f.length === 0){
   return;
 }
 let totalKg = 0;
-f.forEach(d => totalKg += +d.field1 || 0);
+f.forEach(d => totalKg += dayKg(d));
 const first = new Date(f.at(-1).created_at);
 const last = new Date(f[0].created_at);
   totalHistoryTable.innerHTML = `
@@ -452,8 +465,6 @@ const last = new Date(f[0].created_at);
       <td>${(totalKg * price).toFixed(0)}</td>
     </tr>`;
 };
-kg10min.oninput=()=>{localStorage.kg10min=kg10min.value;updateHour();updateDay();updateMonth();updateSeason();}
-priceKg.oninput=()=>{localStorage.priceKg=priceKg.value;updateDay();updateMonth();updateSeason();}
 updateClock();updateCurrent();updateHour();updateDay();updateMonth();updateSeason();
 setInterval(updateClock,1000);
 setInterval(updateCurrent,30000);
