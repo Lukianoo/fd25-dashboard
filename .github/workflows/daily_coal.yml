@@ -107,7 +107,7 @@ jobs:
             for (let i = 1; i < vals.length; i++) {
               const diff = vals[i] - vals[i - 1];
               if (diff >= 0) sec += diff;
-              else sec += vals[i];          // čítač se vynuloval → počítá znovu od nuly
+              else if (vals[i] < 3600) sec += vals[i];   // pád skoro na nulu = nový začátek čítače; menší pokles (návrat z EEPROM po restartu) se nepočítá
             }
 
             const kg   = (sec / 600) * KG_PER_10MIN;
