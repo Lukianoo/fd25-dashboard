@@ -40,8 +40,8 @@ jobs:
           const SRC_FIELD     = 8;        // field8 = celkový čas podavače (sekundy)
           const DST_CHANNEL   = 3238281;
           const DST_WRITE_KEY = process.env.TS_WRITE_KEY || 'O9TZ6GIFVVSW78LV';
-          const KG_PER_10MIN  = 2.3;
-          const PRICE_PER_KG  = 6.2;
+          const KG_PER_10MIN  = 2.4;   // MUSÍ odpovídat index.html
+          const PRICE_PER_KG  = 6.4;   // MUSÍ odpovídat index.html
           const TZ            = 'Europe/Prague';
 
           const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -119,6 +119,7 @@ jobs:
               api_key:    DST_WRITE_KEY,
               field1:     kg.toFixed(3),
               field2:     cost.toFixed(2),
+              field3:     sec.toFixed(0),   // doba chodu podavače v sekundách
               created_at: new Date(end.getTime() - 60000).toISOString(),
             });
             const res  = await fetch('https://api.thingspeak.com/update.json', { method: 'POST', body });
