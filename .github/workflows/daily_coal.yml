@@ -3,13 +3,13 @@ name: Denní součet podavače
 on:
   schedule:
     # Počítá se vždy CELÝ PŘEDCHOZÍ DEN (pražský čas), takže zpoždění GitHubu nevadí.
-    # Dva běhy = záloha; druhý pozná, že den už je zapsaný, a nic neudělá.
-    - cron: '15 2 * * *'
-    - cron: '15 6 * * *'
+    # Běží každé 2 hodiny – GitHub plánované běhy často zpožďuje i o několik hodin.
+    # Kontrolují se poslední 3 dny; už zapsané dny se přeskočí, chybějící se doplní.
+    - cron: '15 */2 * * *'
   workflow_dispatch:
     inputs:
       od:
-        description: 'Dopočítat od data (YYYY-MM-DD), prázdné = včerejšek'
+        description: 'Dopočítat od data (YYYY-MM-DD), prázdné = poslední 3 dny'
         required: false
       do:
         description: 'Dopočítat do data (YYYY-MM-DD), prázdné = stejné jako "od"'
@@ -138,7 +138,8 @@ jobs:
               const [y2, m2, d2] = (process.env.DO || process.env.OD).split('-').map(Number);
               to = new Date(Date.UTC(y2, m2 - 1, d2));
             } else {
-              from = to = new Date(Date.UTC(t.y, t.m, t.d - 1));   // včerejšek
+              from = new Date(Date.UTC(t.y, t.m, t.d - 3));   // poslední 3 dny…
+              to   = new Date(Date.UTC(t.y, t.m, t.d - 1));   // …do včerejška
             }
 
             for (let day = from; day <= to; day = new Date(day.getTime() + 86400000)) {
