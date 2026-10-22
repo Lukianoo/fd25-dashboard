@@ -64,6 +64,10 @@ button{
 table{width:100%;border-collapse:collapse}
 th,td{padding:8px;text-align:center}
 th{background:#eee}
+/* oddělení řádků v tabulkách historie */
+tbody tr{border-bottom:1px solid #d9d9d9}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#f5f8ff}
 footer img{
   transition: .3s;
 }
@@ -151,6 +155,7 @@ footer img:hover{
         <th>Datum</th>
         <th>Spotřeba (kg)</th>
         <th>Cena (Kč)</th>
+        <th>Ø teplota venku</th>
       </tr>
     </thead>
     <tbody id="historyTable"></tbody>
@@ -216,6 +221,7 @@ footer img:hover{
 <script>
 const CHANNEL = 231269;
 const DAY_CHANNEL = 3238281; // denní součty v kg
+const TEMP_CHANNEL = CHANNEL, TEMP_FIELD = 4; // průměrná denní teplota venku (field4)
 const ENERGY = 4.8;
 const EFF = 0.75;
 // ── Jednotné nastavení – MUSÍ odpovídat daily_coal.yml ─────────────
@@ -364,28 +370,63 @@ async function updateMonth(){
   costMonth.textContent =
     (kg * priceFor(new Date())).toFixed(0) + " Kč";
 }
+// ── Průměrná denní teplota venku ────────────────────────────────────
+// ThingSpeak average=daily; stahuje se po 10 dnech (limit 8000 záznamů na dotaz).
+function ymd(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function tsTZ(d){ return ymd(d)+" "+[d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,"0")).join(":"); }
+async function dailyAvgTemp(channel, field, from, to){
+  const res={};
+  let s=new Date(from);
+  while(s<to){
+    const e=new Date(s); e.setDate(e.getDate()+10);
+    const end = e<to ? e : to;
+    try{
+      const j=await fetch(`https://api.thingspeak.com/channels/${channel}/fields/${field}.json?timezone=Europe/Prague&average=daily`
+        +`&start=${encodeURIComponent(tsTZ(s))}&end=${encodeURIComponent(tsTZ(end))}`).then(r=>r.json());
+      for(const f of j.feeds||[]){
+        const v=parseFloat(f[`field${field}`]);
+        if(Number.isFinite(v) && v>-50 && v<60) res[f.created_at.slice(0,10)]=v;
+      }
+    }catch(e){}
+    s=end;
+  }
+  return res;
+}
+function fmtTemp(t){ return Number.isFinite(t) ? t.toFixed(1)+" °C" : "–"; }
 historyBtn.onclick = async () => {
   historyBox.style.display =
     historyBox.style.display === "none" ? "block" : "none";
   historyTable.innerHTML = "";
   const f = await fetchDayFeeds("results=30");
   const map = {};
+  let minD = null;
   for (const d of f){
     const dt = new Date(d.created_at);
-    const day = dt.toLocaleDateString("cs-CZ");
+    const key = ymd(dt);
     const kg = dayKg(d);
-    map[day] = map[day] || { kg: 0, cost: 0 };
-    map[day].kg += kg;
-    map[day].cost += kg * priceFor(dt);
+    map[key] = map[key] || { label: dt.toLocaleDateString("cs-CZ"), kg: 0, cost: 0 };
+    map[key].kg += kg;
+    map[key].cost += kg * priceFor(dt);
+    if (!minD || dt < minD) minD = dt;
   }
-  Object.entries(map).reverse().forEach(([day, v]) => {
-    historyTable.innerHTML += `
+  let temps = {};
+  if (minD){
+    const from = new Date(minD); from.setHours(0,0,0,0);
+    const to = new Date(); to.setHours(0,0,0,0); to.setDate(to.getDate()+1);
+    temps = await dailyAvgTemp(TEMP_CHANNEL, TEMP_FIELD, from, to);
+  }
+  let html = "";
+  Object.keys(map).sort().reverse().forEach(key => {
+    const v = map[key];
+    html += `
       <tr>
-        <td>${day}</td>
+        <td>${v.label}</td>
         <td>${v.kg.toFixed(0)}</td>
         <td>${v.cost.toFixed(0)}</td>
+        <td>${fmtTemp(temps[key])}</td>
       </tr>`;
   });
+  historyTable.innerHTML = html;
 };
 monthHistoryBtn.onclick = async () => {
   monthHistoryBox.style.display =
