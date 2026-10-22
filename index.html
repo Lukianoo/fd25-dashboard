@@ -64,6 +64,21 @@ button{
 table{width:100%;border-collapse:collapse}
 th,td{padding:8px;text-align:center}
 th{background:#eee}
+/* ── Předpověď počasí ── */
+#weatherCard{display:flex;flex-direction:column}
+.wx-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.wx-now{font-size:13px;color:#555}
+.wx-days{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;flex:1;margin-top:6px}
+.wx-day{background:linear-gradient(180deg,#eef5ff,#f8fbff);border-radius:12px;padding:10px 8px;text-align:center;
+  display:flex;flex-direction:column;justify-content:space-between;gap:4px}
+.wx-name{font-weight:700;color:#1e3c72;font-size:14px}
+.wx-date{font-size:12px;color:#777}
+.wx-icon{font-size:38px;line-height:1.1}
+.wx-text{font-size:12px;color:#444;min-height:2.4em}
+.wx-temp{font-size:20px;font-weight:700}
+.wx-max{color:#d32f2f}.wx-min{color:#1565c0}
+.wx-meta{font-size:12px;color:#555}
+@media (max-width:600px){ .wx-icon{font-size:30px} .wx-temp{font-size:17px} .wx-days{gap:6px} }
 /* oddělení řádků v tabulkách historie */
 tbody tr{border-bottom:1px solid #d9d9d9}
 tbody tr:last-child{border-bottom:none}
@@ -126,6 +141,10 @@ footer img:hover{
   <div class="card"><h2>💧 Bojler</h2><div class="value" id="tBojler">--</div></div>
   <div class="card"><h2>🌡️ Venku</h2><div class="value" id="tVenku">--</div></div>
   <div class="card"><h2>⏱️ Podavač celkem</h2><div class="value" id="feedTotal">--</div></div>
+  <div class="card" id="weatherCard">
+    <div class="wx-head"><h2>🌦️ Počasí – Frýdek-Místek</h2><div class="wx-now" id="wxNow"></div></div>
+    <div class="wx-days" id="wxDays"><div class="sub">Načítám předpověď…</div></div>
+  </div>
 </div>
 <br>
 <div class="card">
@@ -529,6 +548,75 @@ totalHistoryBtn.onclick = async () => {
       <td colspan="3" class="sub">ℹ️ Cena za 1 kg uhlí: ${seasonPricesText()}</td>
     </tr>`;
 };
+// ── Předpověď počasí Frýdek-Místek (Open-Meteo, bez klíče) ─────────
+const WX_URL = "https://api.open-meteo.com/v1/forecast?latitude=49.6833&longitude=18.35"
+  + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max"
+  + "&current=temperature_2m,weather_code&timezone=Europe%2FPrague&forecast_days=3";
+function wxInfo(c){
+  if(c===0) return ["☀️","Jasno"];
+  if(c===1) return ["🌤️","Skoro jasno"];
+  if(c===2) return ["⛅","Polojasno"];
+  if(c===3) return ["☁️","Zataženo"];
+  if(c===45||c===48) return ["🌫️","Mlha"];
+  if(c>=51&&c<=57) return ["🌦️","Mrholení"];
+  if(c===61||c===80) return ["🌦️","Slabý déšť"];
+  if(c===63||c===81) return ["🌧️","Déšť"];
+  if(c===65||c===82) return ["🌧️","Silný déšť"];
+  if(c===66||c===67) return ["🌧️","Mrznoucí déšť"];
+  if(c>=71&&c<=77) return ["🌨️","Sněžení"];
+  if(c===85||c===86) return ["🌨️","Sněhové přeháňky"];
+  if(c>=95) return ["⛈️","Bouřky"];
+  return ["🌡️","–"];
+}
+// karta počasí vyplní zbytek řádku vpravo od „Podavač celkem“
+// Na PC: když jsou v řádku před počasím 2 malé karty (Venku, Podavač),
+// dají se pod sebe do 1. sloupce a počasí zabere zbytek – bez prázdného místa.
+function fitWeatherCard(){
+  const card=document.getElementById("weatherCard"); if(!card) return;
+  const grid=card.parentElement, kids=[...grid.children];
+  kids.forEach(k=>{ k.style.gridColumn=""; k.style.gridRow=""; k.style.alignSelf=""; });
+  const cols=getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length;
+  const idx=kids.indexOf(card), pos=idx % cols;
+  if(pos===0){ card.style.gridColumn=`span ${cols}`; return; }      // mobil: přes celou šířku
+  const row=Math.floor(idx/cols)+1;
+  if(pos===2 && cols>=3){
+    kids.slice(idx-2, idx).forEach((k,i)=>{ k.style.gridColumn="1"; k.style.gridRow=String(row+i); });
+    card.style.gridColumn="2 / -1"; card.style.gridRow=`${row} / span 2`;
+  } else {
+    card.style.gridColumn=`span ${cols-pos}`;
+    kids.slice(idx-pos, idx).forEach(k=>k.style.alignSelf="start");
+  }
+}
+async function updateWeather(){
+  try{
+    const j=await fetch(WX_URL).then(r=>r.json());
+    const d=j.daily, names=["Dnes","Zítra"];
+    let html="";
+    for(let i=0;i<d.time.length;i++){
+      const dt=new Date(d.time[i]+"T12:00:00");
+      const name = names[i] || dt.toLocaleDateString("cs-CZ",{weekday:"long"});
+      const [icon,text]=wxInfo(d.weather_code[i]);
+      html+=`<div class="wx-day">
+        <div><div class="wx-name">${name.charAt(0).toUpperCase()+name.slice(1)}</div>
+        <div class="wx-date">${dt.toLocaleDateString("cs-CZ",{day:"numeric",month:"numeric"})}</div></div>
+        <div class="wx-icon">${icon}</div>
+        <div class="wx-text">${text}</div>
+        <div class="wx-temp"><span class="wx-max">${Math.round(d.temperature_2m_max[i])}°</span> / <span class="wx-min">${Math.round(d.temperature_2m_min[i])}°</span></div>
+        <div class="wx-meta">💧 ${d.precipitation_probability_max[i] ?? 0} % · ${(+d.precipitation_sum[i]||0).toFixed(1)} mm</div>
+        <div class="wx-meta">💨 ${Math.round(d.wind_speed_10m_max[i]/3.6)} m/s</div>
+      </div>`;
+    }
+    wxDays.innerHTML=html;
+    const [ci,ct]=wxInfo(j.current.weather_code);
+    wxNow.textContent=`Teď ${ci} ${Math.round(j.current.temperature_2m)} °C · ${ct}`;
+  }catch(e){
+    wxDays.innerHTML='<div class="sub">Předpověď se nepodařilo načíst.</div>';
+  }
+  fitWeatherCard();
+}
+window.addEventListener("resize", fitWeatherCard);
+updateWeather();
+setInterval(updateWeather, 30*60000);
 updateClock();updateCurrent();updateHour();updateDay();updateMonth();updateSeason();
 setInterval(updateClock,1000);
 setInterval(updateCurrent,30000);
