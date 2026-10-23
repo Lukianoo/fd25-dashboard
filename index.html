@@ -83,6 +83,9 @@ th{background:#eee}
 tbody tr{border-bottom:1px solid #d9d9d9}
 tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:#f5f8ff}
+/* víkendy v denní historii */
+tbody tr.weekend{background:#fff6e5}
+tbody tr.weekend:hover{background:#ffedcc}
 footer img{
   transition: .3s;
 }
@@ -411,6 +414,7 @@ async function dailyAvgTemp(channel, field, from, to){
   }
   return res;
 }
+function isWeekend(key){ const d=new Date(key+"T12:00:00"); return d.getDay()===0 || d.getDay()===6; }
 function fmtTemp(t){ return Number.isFinite(t) ? t.toFixed(1)+" °C" : "–"; }
 historyBtn.onclick = async () => {
   historyBox.style.display =
@@ -438,7 +442,7 @@ historyBtn.onclick = async () => {
   Object.keys(map).sort().reverse().forEach(key => {
     const v = map[key];
     html += `
-      <tr>
+      <tr class="${isWeekend(key) ? "weekend" : ""}">
         <td>${v.label}</td>
         <td>${v.kg.toFixed(0)}</td>
         <td>${v.cost.toFixed(0)}</td>
